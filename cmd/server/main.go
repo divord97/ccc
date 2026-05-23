@@ -12,14 +12,17 @@ import (
 	"github.com/divord97/ccc/internal/application/imassist"
 	"github.com/divord97/ccc/internal/application/outbound"
 	"github.com/divord97/ccc/internal/config"
+	"github.com/divord97/ccc/internal/domain/ai"
 	"github.com/divord97/ccc/internal/domain/call"
 	"github.com/divord97/ccc/internal/domain/campaign"
+	"github.com/divord97/ccc/internal/domain/crm"
 	"github.com/divord97/ccc/internal/domain/identity"
 	"github.com/divord97/ccc/internal/domain/im"
 	"github.com/divord97/ccc/internal/domain/integration"
 	"github.com/divord97/ccc/internal/domain/report"
 	"github.com/divord97/ccc/internal/domain/routing"
 	"github.com/divord97/ccc/internal/domain/telephony"
+	"github.com/divord97/ccc/internal/domain/ticket"
 	"github.com/divord97/ccc/internal/infrastructure/llm"
 	infraMySQL "github.com/divord97/ccc/internal/infrastructure/mysql"
 	infraRedis "github.com/divord97/ccc/internal/infrastructure/redis"
@@ -90,6 +93,20 @@ func main() {
 	campaignCaseRepo := infraMySQL.NewCampaignCaseRepo(db)
 	trunkGroupRepo := infraMySQL.NewSIPTrunkGroupRepo(db)
 
+	// --- Phase 7 Repositories ---
+	customerRepo := infraMySQL.NewCustomerRepo(db)
+	customerPhoneRepo := infraMySQL.NewCustomerPhoneRepo(db)
+	interactionRepo := infraMySQL.NewInteractionRepo(db)
+	customFieldRepo := infraMySQL.NewCustomFieldRepo(db)
+	ticketCategoryRepo := infraMySQL.NewTicketCategoryRepo(db)
+	ticketTemplateRepo := infraMySQL.NewTicketTemplateRepo(db)
+	ticketRepo := infraMySQL.NewTicketRepo(db)
+	ticketCommentRepo := infraMySQL.NewTicketCommentRepo(db)
+	knowledgeCategoryRepo := infraMySQL.NewKnowledgeCategoryRepo(db)
+	knowledgeArticleRepo := infraMySQL.NewKnowledgeArticleRepo(db)
+	agentScriptRepo := infraMySQL.NewAgentScriptRepo(db)
+	sessionInfoTemplateRepo := infraMySQL.NewSessionInfoTemplateRepo(db)
+
 	// --- Phase 4 Repositories ---
 	agentReportRepo := infraMySQL.NewAgentReportRepo(db)
 	groupAgentReportRepo := infraMySQL.NewGroupAgentReportRepo(db)
@@ -122,6 +139,14 @@ func main() {
 	campaignSvc := campaign.NewCampaignService(campaignRepo, campaignCaseRepo)
 	trunkHealthSvc := telephony.NewTrunkHealthService(sipTrunkRepo, trunkGroupRepo)
 	_ = trunkHealthSvc
+
+	// --- Phase 7 Domain Services ---
+	customerSvc := crm.NewCustomerService(customerRepo, customerPhoneRepo, interactionRepo, customFieldRepo)
+	ticketTemplateSvc := ticket.NewTicketTemplateService(ticketTemplateRepo, ticketCategoryRepo)
+	ticketSvc := ticket.NewTicketService(ticketRepo, ticketTemplateRepo, ticketCommentRepo)
+	knowledgeSvc := ai.NewKnowledgeService(knowledgeCategoryRepo, knowledgeArticleRepo)
+	agentScriptSvc := ai.NewAgentScriptService(agentScriptRepo)
+	sessionInfoSvc := ai.NewSessionInfoTemplateService(sessionInfoTemplateRepo)
 
 	// --- Phase 8 Repositories ---
 	imChannelRepo := infraMySQL.NewIMChannelRepo(db)
@@ -174,6 +199,11 @@ func main() {
 	campaignHandler := handler.NewCampaignHandler(campaignSvc, dialerSvc)
 	b2bHandler := handler.NewB2BHandler(b2bSvc)
 	trunkGroupHandler := handler.NewTrunkGroupHandler(trunkGroupRepo)
+	customerHandler := handler.NewCustomerHandler(customerSvc)
+	ticketHandler := handler.NewTicketHandler(ticketSvc, ticketTemplateSvc)
+	knowledgeHandler := handler.NewKnowledgeHandler(knowledgeSvc)
+	agentScriptHandler := handler.NewAgentScriptHandler(agentScriptSvc)
+	sessionInfoHandler := handler.NewSessionInfoHandler(sessionInfoSvc)
 	imChannelHandler := handler.NewIMChannelHandler(imSvc)
 	imSessionHandler := handler.NewIMSessionHandler(imSvc)
 	widgetHandler := handler.NewWidgetHandler(imSvc)
@@ -211,6 +241,11 @@ func main() {
 		CampaignHandler:      campaignHandler,
 		B2BHandler:           b2bHandler,
 		TrunkGroupHandler:    trunkGroupHandler,
+		CustomerHandler:      customerHandler,
+		TicketHandler:        ticketHandler,
+		KnowledgeHandler:     knowledgeHandler,
+		AgentScriptHandler:   agentScriptHandler,
+		SessionInfoHandler:   sessionInfoHandler,
 		IMChannelHandler:     imChannelHandler,
 		IMSessionHandler:     imSessionHandler,
 		WidgetHandler:        widgetHandler,

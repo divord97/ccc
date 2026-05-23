@@ -35,12 +35,12 @@ type RouterDeps struct {
 	CallHandler        *handler.CallHandler
 
 	// Phase 3
-	CallControlHandler    *handler.CallControlHandler
-	AgentPresenceHandler  *handler.AgentPresenceHandler
-	WebhookConfigHandler  *handler.WebhookConfigHandler
+	CallControlHandler     *handler.CallControlHandler
+	AgentPresenceHandler   *handler.AgentPresenceHandler
+	WebhookConfigHandler   *handler.WebhookConfigHandler
 	ScreenPopConfigHandler *handler.ScreenPopConfigHandler
-	QuickReplyHandler     *handler.QuickReplyHandler
-	SmsConfigHandler      *handler.SmsConfigHandler
+	QuickReplyHandler      *handler.QuickReplyHandler
+	SmsConfigHandler       *handler.SmsConfigHandler
 
 	// Phase 4
 	DashboardHandler *handler.DashboardHandler
@@ -55,12 +55,19 @@ type RouterDeps struct {
 	B2BHandler        *handler.B2BHandler
 	TrunkGroupHandler *handler.TrunkGroupHandler
 
+	// Phase 7
+	CustomerHandler    *handler.CustomerHandler
+	TicketHandler      *handler.TicketHandler
+	KnowledgeHandler   *handler.KnowledgeHandler
+	AgentScriptHandler *handler.AgentScriptHandler
+	SessionInfoHandler *handler.SessionInfoHandler
+
 	// Phase 8
-	IMChannelHandler   *handler.IMChannelHandler
-	IMSessionHandler   *handler.IMSessionHandler
-	WidgetHandler      *handler.WidgetHandler
+	IMChannelHandler    *handler.IMChannelHandler
+	IMSessionHandler    *handler.IMSessionHandler
+	WidgetHandler       *handler.WidgetHandler
 	EmailInboundHandler *handler.EmailInboundHandler
-	IMAssistHandler    *handler.IMAssistHandler
+	IMAssistHandler     *handler.IMAssistHandler
 
 	// Infrastructure
 	RateLimiter  *redis.RateLimiter
@@ -276,16 +283,14 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Get("/back2back", deps.ReportHandler.Back2BackReport)
 			r.Get("/internal-call", deps.ReportHandler.InternalCallReport)
 			r.Get("/agent-status-log", deps.ReportHandler.AgentStatusLog)
-			r.Get("/agent-status-log/export", deps.ReportHandler.AgentStatusLogExport)
 		})
 
-		r.Route("/csat-configs", func(r chi.Router) {
-			r.Post("/", deps.CSATHandler.CreateConfig)
+		r.Route("/csat", func(r chi.Router) {
+			r.Post("/config", deps.CSATHandler.CreateConfig)
 			r.Get("/", deps.CSATHandler.ListConfigs)
-			r.Put("/{id}", deps.CSATHandler.UpdateConfig)
+			r.Put("/config", deps.CSATHandler.UpdateConfig)
+			r.Get("/results", deps.CSATHandler.ListResults)
 		})
-
-		r.Get("/csat-results", deps.CSATHandler.ListResults)
 
 		// --- Phase 5 Routes ---
 
@@ -333,6 +338,71 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Get("/{id}/members", deps.TrunkGroupHandler.ListMembers)
 		})
 
+		// --- Phase 7 Routes ---
+
+		r.Route("/customers", func(r chi.Router) {
+			r.Post("/", deps.CustomerHandler.Create)
+			r.Get("/", deps.CustomerHandler.List)
+			r.Get("/{id}", deps.CustomerHandler.GetByID)
+			r.Put("/{id}", deps.CustomerHandler.Update)
+			r.Delete("/{id}", deps.CustomerHandler.Delete)
+			r.Post("/import", deps.CustomerHandler.Import)
+			r.Get("/by-phone/{phone}", deps.CustomerHandler.FindByPhone)
+			r.Get("/{id}/interactions", deps.CustomerHandler.ListInteractions)
+		})
+
+		r.Route("/custom-fields", func(r chi.Router) {
+			r.Post("/", deps.CustomerHandler.CreateFieldDefinition)
+			r.Get("/", deps.CustomerHandler.ListFieldDefinitions)
+		})
+
+		r.Route("/ticket-categories", func(r chi.Router) {
+			r.Post("/", deps.TicketHandler.CreateCategory)
+			r.Get("/", deps.TicketHandler.ListCategories)
+		})
+
+		r.Route("/ticket-templates", func(r chi.Router) {
+			r.Post("/", deps.TicketHandler.CreateTemplate)
+			r.Get("/", deps.TicketHandler.ListTemplates)
+			r.Put("/{id}", deps.TicketHandler.UpdateTemplate)
+			r.Post("/{id}/publish", deps.TicketHandler.PublishTemplate)
+			r.Post("/{id}/offline", deps.TicketHandler.OfflineTemplate)
+		})
+
+		r.Route("/tickets", func(r chi.Router) {
+			r.Post("/", deps.TicketHandler.Create)
+			r.Get("/", deps.TicketHandler.ListTickets)
+			r.Get("/{id}", deps.TicketHandler.GetTicket)
+			r.Put("/{id}", deps.TicketHandler.UpdateTicket)
+			r.Post("/{id}/assign", deps.TicketHandler.AssignTicket)
+			r.Post("/{id}/comments", deps.TicketHandler.AddComment)
+		})
+
+		r.Route("/knowledge-categories", func(r chi.Router) {
+			r.Post("/", deps.KnowledgeHandler.CreateCategory)
+			r.Get("/", deps.KnowledgeHandler.ListCategories)
+		})
+
+		r.Route("/knowledge-articles", func(r chi.Router) {
+			r.Post("/", deps.KnowledgeHandler.CreateArticle)
+			r.Get("/", deps.KnowledgeHandler.ListArticles)
+			r.Get("/search", deps.KnowledgeHandler.Search)
+			r.Get("/{id}", deps.KnowledgeHandler.GetArticle)
+			r.Put("/{id}", deps.KnowledgeHandler.UpdateArticle)
+		})
+
+		r.Route("/agent-scripts", func(r chi.Router) {
+			r.Post("/", deps.AgentScriptHandler.Create)
+			r.Get("/", deps.AgentScriptHandler.List)
+			r.Put("/{id}", deps.AgentScriptHandler.Update)
+		})
+
+		r.Route("/session-info-templates", func(r chi.Router) {
+			r.Post("/", deps.SessionInfoHandler.Create)
+			r.Get("/", deps.SessionInfoHandler.List)
+			r.Put("/{id}", deps.SessionInfoHandler.Update)
+		})
+
 		// --- Phase 8 Routes ---
 
 		r.Route("/im-channels", func(r chi.Router) {
@@ -350,19 +420,21 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Post("/{id}/messages", deps.IMSessionHandler.SendMessage)
 		})
 
-		r.Route("/widget", func(r chi.Router) {
-			r.Post("/sessions", deps.WidgetHandler.CreateSession)
-			r.Post("/sessions/{id}/messages", deps.WidgetHandler.SendMessage)
-		})
-
-		r.Post("/email/inbound", deps.EmailInboundHandler.Inbound)
-
 		r.Route("/im/ai-assist", func(r chi.Router) {
 			r.Post("/correct", deps.IMAssistHandler.Correct)
 			r.Post("/expand", deps.IMAssistHandler.Expand)
 			r.Post("/optimize", deps.IMAssistHandler.Optimize)
 		})
 	})
+
+	// --- Public Routes (no JWT auth) ---
+
+	r.Route("/api/v1/widget", func(r chi.Router) {
+		r.Post("/sessions", deps.WidgetHandler.CreateSession)
+		r.Post("/sessions/{id}/messages", deps.WidgetHandler.SendMessage)
+	})
+
+	r.Post("/api/v1/email/inbound", deps.EmailInboundHandler.Inbound)
 
 	return r
 }

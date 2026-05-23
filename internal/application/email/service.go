@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"errors"
 
 	"github.com/divord97/ccc/internal/domain/im"
 	"github.com/rs/zerolog"
@@ -42,6 +43,9 @@ func (s *Service) ProcessInbound(ctx context.Context, in InboundInput) (*im.IMSe
 	content := in.Subject
 	if in.Body != "" {
 		content = in.Subject + "\n\n" + in.Body
+	}
+	if content == "" {
+		return nil, errors.New("email has no subject or body")
 	}
 	_, err = s.imSvc.SendMessage(ctx, sess.ID, im.SenderTypeVisitor, in.From, im.ContentTypeText, content)
 	if err != nil {
