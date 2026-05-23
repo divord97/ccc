@@ -77,8 +77,10 @@ func (s *Service) deliverToConfig(ctx context.Context, cfg *integration.WebhookC
 	var respStatus int
 	var respBody string
 	success := false
+	actualAttempts := 0
 
 	for attempt := 1; attempt <= s.maxRetry; attempt++ {
+		actualAttempts = attempt
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.URL, bytes.NewReader(payload))
 		if err != nil {
 			lastErr = err.Error()
@@ -121,7 +123,7 @@ func (s *Service) deliverToConfig(ctx context.Context, cfg *integration.WebhookC
 		Payload:         string(payload),
 		ResponseStatus:  respStatus,
 		ResponseBody:    respBody,
-		AttemptCount:    s.maxRetry,
+		AttemptCount:    actualAttempts,
 		Success:         success,
 		ErrorMessage:    lastErr,
 		CreatedAt:       time.Now(),
