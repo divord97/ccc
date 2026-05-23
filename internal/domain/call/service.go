@@ -27,6 +27,7 @@ type CreateCallInput struct {
 	TenantID      int64
 	Direction     CallDirection
 	CallType      CallType
+	MediaType     MediaType
 	Caller        string
 	Callee        string
 	AgentUserID   *int64
@@ -34,6 +35,13 @@ type CreateCallInput struct {
 	PhoneNumberID *int64
 	CarrierID     *int64
 	SIPTrunkID    *int64
+}
+
+func resolveMediaType(mt MediaType) MediaType {
+	if mt == "" {
+		return MediaTypeAudio
+	}
+	return mt
 }
 
 func (s *CallService) CreateInboundCall(ctx context.Context, in CreateCallInput) (*Call, error) {
@@ -50,7 +58,7 @@ func (s *CallService) CreateInboundCall(ctx context.Context, in CreateCallInput)
 		TenantID:      in.TenantID,
 		Direction:     in.Direction,
 		CallType:      in.CallType,
-		MediaType:     MediaTypeAudio,
+		MediaType:     resolveMediaType(in.MediaType),
 		Caller:        in.Caller,
 		Callee:        in.Callee,
 		IVRFlowID:     in.IVRFlowID,
@@ -135,7 +143,7 @@ func (s *CallService) CreateOutboundCall(ctx context.Context, in CreateCallInput
 		TenantID:      in.TenantID,
 		Direction:     in.Direction,
 		CallType:      in.CallType,
-		MediaType:     MediaTypeAudio,
+		MediaType:     resolveMediaType(in.MediaType),
 		Caller:        in.Caller,
 		Callee:        in.Callee,
 		AgentUserID:   in.AgentUserID,
@@ -179,7 +187,7 @@ func (s *CallService) CreateInternalCall(ctx context.Context, in CreateCallInput
 		TenantID:    in.TenantID,
 		Direction:   in.Direction,
 		CallType:    in.CallType,
-		MediaType:   MediaTypeAudio,
+		MediaType:   resolveMediaType(in.MediaType),
 		Caller:      in.Caller,
 		Callee:      in.Callee,
 		AgentUserID: in.AgentUserID,
