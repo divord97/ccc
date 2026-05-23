@@ -1,0 +1,38 @@
+<!-- External SIP Profile — PSTN trunks -->
+<profile name="external">
+  <settings>
+    <param name="debug" value="0"/>
+    <param name="sip-trace" value="no"/>
+
+    <!-- Network -->
+    <param name="sip-ip" value="$${local_ip_v4}"/>
+    <param name="sip-port" value="5080"/>
+    <param name="rtp-ip" value="$${local_ip_v4}"/>
+    <param name="ext-rtp-ip" value="auto-nat"/>
+    <param name="ext-sip-ip" value="auto-nat"/>
+
+    <!-- RTP -->
+    <param name="rtp-timer-name" value="soft"/>
+
+    <!-- Codec -->
+    <param name="codec-prefs" value="$${outbound_codec_prefs}"/>
+    <param name="inbound-codec-negotiation" value="generous"/>
+
+    <!-- TLS for trunk connections -->
+    <param name="tls" value="true"/>
+    <param name="tls-bind-params" value="transport=tls"/>
+    <param name="tls-sip-port" value="5081"/>
+    <param name="tls-cert-dir" value="$${internal_ssl_dir}"/>
+    <param name="tls-version" value="tlsv1.2"/>
+
+    <!-- SRTP -->
+    <param name="inbound-zrtp-passthru" value="true"/>
+
+    <!-- Auth -->
+    <param name="apply-inbound-acl" value="domains"/>
+
+    <!-- Context -->
+    <param name="context" value="public"/>
+    <param name="dialplan" value="XML"/>
+  </settings>
+</profile>

@@ -1,0 +1,135 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(ccc_http_requests_total[5m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Request Duration (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ccc_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(ccc_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "title": "Active Calls",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "ccc_active_calls", "legendFormat": "Active Calls" }
+      ],
+      "fieldConfig": {
+        "defaults": { "thresholds": { "steps": [
+          { "color": "green", "value": null },
+          { "color": "yellow", "value": 500 },
+          { "color": "red", "value": 900 }
+        ]}}
+      }
+    },
+    {
+      "title": "Requests In-Flight",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 8 },
+      "targets": [
+        { "expr": "ccc_http_requests_in_flight", "legendFormat": "In-Flight" }
+      ]
+    },
+    {
+      "title": "ESL Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 8 },
+      "targets": [
+        { "expr": "ccc_esl_connections_active", "legendFormat": "ESL" }
+      ]
+    },
+    {
+      "title": "Agent Status Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "ccc_active_agents", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "title": "Queue Depth by Skill Group",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "targets": [
+        { "expr": "ccc_queue_depth", "legendFormat": "{{skill_group}}" }
+      ]
+    },
+    {
+      "title": "ESL Command Duration (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ccc_esl_command_duration_seconds_bucket[5m])) by (le, command))",
+          "legendFormat": "{{command}}"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Error Rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "expr": "sum(rate(ccc_http_requests_total{status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "thresholds": { "steps": [
+          { "color": "green", "value": null },
+          { "color": "red", "value": 0.1 }
+        ]}}
+      }
+    },
+    {
+      "title": "Campaign Progress",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "ccc_campaign_progress_ratio", "legendFormat": "Campaign {{campaign_id}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 1,
+          "thresholds": { "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "green", "value": 0.9 }
+          ]}
+        }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["ccc"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "CCC Platform Overview",
+  "uid": "ccc-overview"
+}

@@ -1,0 +1,56 @@
+<!-- Internal SIP Profile — Agent SIP phones + WebRTC via mod_verto -->
+<profile name="internal">
+  <settings>
+    <param name="debug" value="0"/>
+    <param name="sip-trace" value="no"/>
+    <param name="sip-capture" value="no"/>
+
+    <!-- Network -->
+    <param name="sip-ip" value="$${local_ip_v4}"/>
+    <param name="sip-port" value="5060"/>
+    <param name="rtp-ip" value="$${local_ip_v4}"/>
+    <param name="ext-rtp-ip" value="auto-nat"/>
+    <param name="ext-sip-ip" value="auto-nat"/>
+
+    <!-- RTP -->
+    <param name="rtp-timer-name" value="soft"/>
+    <param name="rtp-start-port" value="$${rtp_start_port}"/>
+    <param name="rtp-end-port" value="$${rtp_end_port}"/>
+
+    <!-- Codec -->
+    <param name="codec-prefs" value="$${global_codec_prefs}"/>
+    <param name="inbound-codec-negotiation" value="generous"/>
+
+    <!-- TLS -->
+    <param name="tls" value="$${internal_ssl_enable}"/>
+    <param name="tls-bind-params" value="transport=tls"/>
+    <param name="tls-sip-port" value="5061"/>
+    <param name="tls-cert-dir" value="$${internal_ssl_dir}"/>
+    <param name="tls-version" value="tlsv1.2"/>
+
+    <!-- SRTP -->
+    <param name="inbound-zrtp-passthru" value="true"/>
+
+    <!-- NAT -->
+    <param name="apply-nat-acl" value="nat.auto"/>
+    <param name="local-network-acl" value="localnet.auto"/>
+    <param name="aggressive-nat-detection" value="true"/>
+    <param name="NDLB-force-rport" value="safe"/>
+
+    <!-- Auth -->
+    <param name="apply-inbound-acl" value="domains"/>
+    <param name="challenge-realm" value="auto_from"/>
+
+    <!-- Recording -->
+    <param name="record-path" value="$${recordings_dir}"/>
+    <param name="record-template" value="${caller_id_number}.${strftime(%Y%m%d-%H%M%S)}.wav"/>
+
+    <!-- Other -->
+    <param name="context" value="default"/>
+    <param name="dialplan" value="XML"/>
+    <param name="dtmf-duration" value="2000"/>
+    <param name="hold-music" value="$${hold_music}"/>
+    <param name="manage-presence" value="true"/>
+    <param name="presence-hosts" value="$${domain_name}"/>
+  </settings>
+</profile>

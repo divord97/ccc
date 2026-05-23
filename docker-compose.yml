@@ -1,0 +1,197 @@
+version: "3.9"
+
+services:
+  # ─── Go API Server ───
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_DSN=${DATABASE_DSN:-ccc:ccc_pass@tcp(mysql:3306)/ccc?parseTime=true&charset=utf8mb4&collation=utf8mb4_0900_ai_ci}
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_ISSUER=${JWT_ISSUER:-ccc-platform}
+      - SNOWFLAKE_NODE_ID=${SNOWFLAKE_NODE_ID:-1}
+      - ESL_HOST=freeswitch
+      - ESL_PORT=8021
+      - ESL_PASSWORD=${ESL_PASSWORD:-ClueCon}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
+      - NATS_URL=nats://nats:4222
+      - KAFKA_BROKERS=kafka:9092
+      - PROMETHEUS_ENABLED=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── React Frontend ───
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── MySQL 8.0 ───
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-ccc_root_pass}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-ccc}
+      - MYSQL_USER=${MYSQL_USER:-ccc}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-ccc_pass}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_0900_ai_ci
+      --default-authentication-plugin=mysql_native_password
+      --max-connections=500
+      --innodb-buffer-pool-size=512M
+      --slow-query-log=ON
+      --long-query-time=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-ccc_root_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── Redis 7 ───
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── MinIO (S3-compatible storage for recordings) ───
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── FreeSWITCH ───
+  freeswitch:
+    image: signalwire/freeswitch:1.10
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "5061:5061/tcp"
+      - "8021:8021/tcp"
+      - "8081:8081/tcp"
+      - "8082:8082/tcp"
+      - "16384-16394:16384-16394/udp"
+    volumes:
+      - ./deploy/freeswitch/conf:/etc/freeswitch
+      - freeswitch-recordings:/var/lib/freeswitch/recordings
+      - freeswitch-sounds:/usr/share/freeswitch/sounds
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── NATS (event bus) ───
+  nats:
+    image: nats:2-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: --jetstream --store_dir /data --http_port 8222
+    volumes:
+      - nats-data:/data
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── Prometheus ───
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+  # ─── Grafana ───
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - ccc-net
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:
+  freeswitch-recordings:
+  freeswitch-sounds:
+  nats-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  ccc-net:
+    driver: bridge
