@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS full_duplex_configs;
+DROP TABLE IF EXISTS ring_analysis_logs;
+DROP TABLE IF EXISTS ring_analysis_configs;
+DROP TABLE IF EXISTS simulated_calls;
+DROP TABLE IF EXISTS training_exams;
+DROP TABLE IF EXISTS training_courses;
+DROP TABLE IF EXISTS conversation_analysis_tasks;
+DROP TABLE IF EXISTS voice_profiles;
+DROP TABLE IF EXISTS comm_agent_sessions;
+DROP TABLE IF EXISTS comm_agents;
