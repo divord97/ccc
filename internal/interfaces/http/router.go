@@ -93,6 +93,7 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(chiMiddleware.RequestID)
+	r.Use(middleware.Metrics)
 	r.Use(middleware.RequestLogger(deps.Logger))
 
 	r.Get("/health", handler.Health)

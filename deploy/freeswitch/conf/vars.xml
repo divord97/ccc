@@ -1,0 +1,30 @@
+<!-- FreeSWITCH Global Variables -->
+<include>
+  <!-- SIP -->
+  <X-PRE-PROCESS cmd="set" data="default_password=1234"/>
+  <X-PRE-PROCESS cmd="set" data="domain=$${local_ip_v4}"/>
+  <X-PRE-PROCESS cmd="set" data="domain_name=$${domain}"/>
+  <X-PRE-PROCESS cmd="set" data="hold_music=local_stream://moh"/>
+  <X-PRE-PROCESS cmd="set" data="use_profile=internal"/>
+  <X-PRE-PROCESS cmd="set" data="default_acodec=PCMA"/>
+  <X-PRE-PROCESS cmd="set" data="global_codec_prefs=PCMA,PCMU,G729,opus"/>
+  <X-PRE-PROCESS cmd="set" data="outbound_codec_prefs=PCMA,PCMU,G729"/>
+
+  <!-- ESL -->
+  <X-PRE-PROCESS cmd="set" data="event_socket_password=ClueCon"/>
+
+  <!-- TLS/SRTP -->
+  <X-PRE-PROCESS cmd="set" data="internal_ssl_enable=true"/>
+  <X-PRE-PROCESS cmd="set" data="internal_ssl_dir=$${base_dir}/certs"/>
+
+  <!-- RTP Ports -->
+  <X-PRE-PROCESS cmd="set" data="rtp_start_port=16384"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port=32768"/>
+
+  <!-- Recording -->
+  <X-PRE-PROCESS cmd="set" data="recordings_dir=$${base_dir}/recordings"/>
+
+  <!-- mod_verto (WebRTC) -->
+  <X-PRE-PROCESS cmd="set" data="verto_listen_port=8081"/>
+  <X-PRE-PROCESS cmd="set" data="verto_wss_port=8082"/>
+</include>
