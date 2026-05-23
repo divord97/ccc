@@ -538,14 +538,14 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 
 		// --- Advanced AI Routes ---
 
-		r.Route("/tenants/{tenantID}/comm-agents", func(r chi.Router) {
+		r.Route("/comm-agents", func(r chi.Router) {
 			r.Get("/", handler.ListCommAgents(deps.CommAgentSvc))
 			r.Post("/", handler.CreateCommAgent(deps.CommAgentSvc))
 			r.Get("/{id}", handler.GetCommAgent(deps.CommAgentSvc))
 			r.Delete("/{id}", handler.DeleteCommAgent(deps.CommAgentSvc))
 		})
 
-		r.Route("/tenants/{tenantID}/voice-profiles", func(r chi.Router) {
+		r.Route("/voice-profiles", func(r chi.Router) {
 			r.Get("/", handler.ListVoiceProfiles(deps.VoiceSvc))
 			r.Post("/", handler.CreateVoiceProfile(deps.VoiceSvc))
 			r.Get("/{id}", handler.GetVoiceProfile(deps.VoiceSvc))
@@ -553,29 +553,29 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Delete("/{id}", handler.DeleteVoiceProfile(deps.VoiceSvc))
 		})
 
-		r.Route("/tenants/{tenantID}/conversation-analysis", func(r chi.Router) {
+		r.Route("/conversation-analysis", func(r chi.Router) {
 			r.Get("/", handler.ListAnalysisTasks(deps.AnalysisSvc))
 			r.Post("/", handler.CreateAnalysisTask(deps.AnalysisSvc))
 			r.Get("/{id}", handler.GetAnalysisTask(deps.AnalysisSvc))
 		})
 
-		r.Route("/tenants/{tenantID}/training/courses", func(r chi.Router) {
+		r.Route("/training/courses", func(r chi.Router) {
 			r.Get("/", handler.ListCourses(deps.TrainingSvc))
 			r.Post("/", handler.CreateCourse(deps.TrainingSvc))
 			r.Get("/{id}", handler.GetCourse(deps.TrainingSvc))
 			r.Post("/{id}/publish", handler.PublishCourse(deps.TrainingSvc))
 		})
-		r.Post("/tenants/{tenantID}/training/exams", handler.SubmitExam(deps.TrainingSvc))
-		r.Get("/tenants/{tenantID}/training/agents/{agentID}/exams", handler.ListExamsByAgent(deps.TrainingSvc))
-		r.Post("/tenants/{tenantID}/training/simulated-calls", handler.CreateSimulatedCall(deps.TrainingSvc))
-		r.Get("/tenants/{tenantID}/training/agents/{agentID}/simulated-calls", handler.ListSimulatedCalls(deps.TrainingSvc))
+		r.Post("/training/exams", handler.SubmitExam(deps.TrainingSvc))
+		r.Get("/training/agents/{agentID}/exams", handler.ListExamsByAgent(deps.TrainingSvc))
+		r.Post("/training/simulated-calls", handler.CreateSimulatedCall(deps.TrainingSvc))
+		r.Get("/training/agents/{agentID}/simulated-calls", handler.ListSimulatedCalls(deps.TrainingSvc))
 
-		r.Get("/tenants/{tenantID}/ring-analysis/config", handler.GetRingAnalysisConfig(deps.RingSvc))
-		r.Put("/tenants/{tenantID}/ring-analysis/config", handler.UpsertRingAnalysisConfig(deps.RingSvc))
-		r.Get("/tenants/{tenantID}/calls/{callID}/ring-analysis", handler.GetRingAnalysisLogs(deps.RingSvc))
+		r.Get("/ring-analysis/config", handler.GetRingAnalysisConfig(deps.RingSvc))
+		r.Put("/ring-analysis/config", handler.UpsertRingAnalysisConfig(deps.RingSvc))
+		r.Get("/calls/{callID}/ring-analysis", handler.GetRingAnalysisLogs(deps.RingSvc))
 
-		r.Get("/tenants/{tenantID}/full-duplex/config", handler.GetFullDuplexConfig(deps.FullDuplexSvc))
-		r.Put("/tenants/{tenantID}/full-duplex/config", handler.UpsertFullDuplexConfig(deps.FullDuplexSvc))
+		r.Get("/full-duplex/config", handler.GetFullDuplexConfig(deps.FullDuplexSvc))
+		r.Put("/full-duplex/config", handler.UpsertFullDuplexConfig(deps.FullDuplexSvc))
 	})
 
 	// --- Public Routes (no JWT auth) ---

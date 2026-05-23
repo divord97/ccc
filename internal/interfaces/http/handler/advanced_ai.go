@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/divord97/ccc/internal/domain/ai"
+	"github.com/divord97/ccc/internal/interfaces/http/middleware"
 	"github.com/divord97/ccc/pkg/response"
 	"github.com/go-chi/chi/v5"
 )
@@ -14,7 +15,7 @@ import (
 
 func ListCommAgents(svc *ai.CommAgentService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		items, err := svc.List(r.Context(), tenantID)
 		if err != nil {
 			response.Error(w, 500, err.Error())
@@ -26,7 +27,7 @@ func ListCommAgents(svc *ai.CommAgentService) http.HandlerFunc {
 
 func CreateCommAgent(svc *ai.CommAgentService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var in ai.CreateCommAgentInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			response.Error(w, 400, err.Error())
@@ -44,7 +45,7 @@ func CreateCommAgent(svc *ai.CommAgentService) http.HandlerFunc {
 
 func GetCommAgent(svc *ai.CommAgentService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		a, err := svc.Get(r.Context(), tenantID, id)
 		if err != nil {
@@ -57,7 +58,7 @@ func GetCommAgent(svc *ai.CommAgentService) http.HandlerFunc {
 
 func DeleteCommAgent(svc *ai.CommAgentService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		if err := svc.Delete(r.Context(), tenantID, id); err != nil {
 			response.Error(w, 500, err.Error())
@@ -71,7 +72,7 @@ func DeleteCommAgent(svc *ai.CommAgentService) http.HandlerFunc {
 
 func ListVoiceProfiles(svc *ai.VoiceProfileService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		items, err := svc.List(r.Context(), tenantID)
 		if err != nil {
 			response.Error(w, 500, err.Error())
@@ -83,7 +84,7 @@ func ListVoiceProfiles(svc *ai.VoiceProfileService) http.HandlerFunc {
 
 func CreateVoiceProfile(svc *ai.VoiceProfileService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var in ai.CreateVoiceProfileInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			response.Error(w, 400, err.Error())
@@ -101,7 +102,7 @@ func CreateVoiceProfile(svc *ai.VoiceProfileService) http.HandlerFunc {
 
 func GetVoiceProfile(svc *ai.VoiceProfileService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		v, err := svc.Get(r.Context(), tenantID, id)
 		if err != nil {
@@ -114,7 +115,7 @@ func GetVoiceProfile(svc *ai.VoiceProfileService) http.HandlerFunc {
 
 func StartVoiceTraining(svc *ai.VoiceProfileService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		v, err := svc.StartTraining(r.Context(), tenantID, id)
 		if err != nil {
@@ -127,7 +128,7 @@ func StartVoiceTraining(svc *ai.VoiceProfileService) http.HandlerFunc {
 
 func DeleteVoiceProfile(svc *ai.VoiceProfileService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		if err := svc.Delete(r.Context(), tenantID, id); err != nil {
 			response.Error(w, 500, err.Error())
@@ -141,7 +142,7 @@ func DeleteVoiceProfile(svc *ai.VoiceProfileService) http.HandlerFunc {
 
 func ListAnalysisTasks(svc *ai.ConversationAnalysisService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		items, err := svc.List(r.Context(), tenantID)
 		if err != nil {
 			response.Error(w, 500, err.Error())
@@ -153,7 +154,7 @@ func ListAnalysisTasks(svc *ai.ConversationAnalysisService) http.HandlerFunc {
 
 func CreateAnalysisTask(svc *ai.ConversationAnalysisService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var in ai.CreateAnalysisTaskInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			response.Error(w, 400, err.Error())
@@ -171,7 +172,7 @@ func CreateAnalysisTask(svc *ai.ConversationAnalysisService) http.HandlerFunc {
 
 func GetAnalysisTask(svc *ai.ConversationAnalysisService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		t, err := svc.Get(r.Context(), tenantID, id)
 		if err != nil {
@@ -186,7 +187,7 @@ func GetAnalysisTask(svc *ai.ConversationAnalysisService) http.HandlerFunc {
 
 func ListCourses(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		items, err := svc.ListCourses(r.Context(), tenantID)
 		if err != nil {
 			response.Error(w, 500, err.Error())
@@ -198,7 +199,7 @@ func ListCourses(svc *ai.TrainingService) http.HandlerFunc {
 
 func CreateCourse(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var in ai.CreateCourseInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			response.Error(w, 400, err.Error())
@@ -216,7 +217,7 @@ func CreateCourse(svc *ai.TrainingService) http.HandlerFunc {
 
 func GetCourse(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		c, err := svc.GetCourse(r.Context(), tenantID, id)
 		if err != nil {
@@ -229,7 +230,7 @@ func GetCourse(svc *ai.TrainingService) http.HandlerFunc {
 
 func PublishCourse(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		c, err := svc.PublishCourse(r.Context(), tenantID, id)
 		if err != nil {
@@ -242,7 +243,7 @@ func PublishCourse(svc *ai.TrainingService) http.HandlerFunc {
 
 func SubmitExam(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var in ai.SubmitExamInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			response.Error(w, 400, err.Error())
@@ -260,7 +261,7 @@ func SubmitExam(svc *ai.TrainingService) http.HandlerFunc {
 
 func ListExamsByAgent(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		agentID, _ := strconv.ParseInt(chi.URLParam(r, "agentID"), 10, 64)
 		items, err := svc.ListExamsByAgent(r.Context(), tenantID, agentID)
 		if err != nil {
@@ -273,7 +274,7 @@ func ListExamsByAgent(svc *ai.TrainingService) http.HandlerFunc {
 
 func CreateSimulatedCall(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var in ai.CreateSimulatedCallInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			response.Error(w, 400, err.Error())
@@ -291,7 +292,7 @@ func CreateSimulatedCall(svc *ai.TrainingService) http.HandlerFunc {
 
 func ListSimulatedCalls(svc *ai.TrainingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		agentID, _ := strconv.ParseInt(chi.URLParam(r, "agentID"), 10, 64)
 		items, err := svc.ListSimulatedCalls(r.Context(), tenantID, agentID)
 		if err != nil {
@@ -306,7 +307,7 @@ func ListSimulatedCalls(svc *ai.TrainingService) http.HandlerFunc {
 
 func GetRingAnalysisConfig(svc *ai.RingAnalysisService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		c, err := svc.GetConfig(r.Context(), tenantID)
 		if err != nil {
 			response.Error(w, 404, err.Error())
@@ -318,7 +319,7 @@ func GetRingAnalysisConfig(svc *ai.RingAnalysisService) http.HandlerFunc {
 
 func UpsertRingAnalysisConfig(svc *ai.RingAnalysisService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var c ai.RingAnalysisConfig
 		if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 			response.Error(w, 400, err.Error())
@@ -335,7 +336,7 @@ func UpsertRingAnalysisConfig(svc *ai.RingAnalysisService) http.HandlerFunc {
 
 func GetRingAnalysisLogs(svc *ai.RingAnalysisService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		callID, _ := strconv.ParseInt(chi.URLParam(r, "callID"), 10, 64)
 		logs, err := svc.GetCallLogs(r.Context(), tenantID, callID)
 		if err != nil {
@@ -350,7 +351,7 @@ func GetRingAnalysisLogs(svc *ai.RingAnalysisService) http.HandlerFunc {
 
 func GetFullDuplexConfig(svc *ai.FullDuplexService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		c, err := svc.GetConfig(r.Context(), tenantID)
 		if err != nil {
 			response.Error(w, 404, err.Error())
@@ -362,7 +363,7 @@ func GetFullDuplexConfig(svc *ai.FullDuplexService) http.HandlerFunc {
 
 func UpsertFullDuplexConfig(svc *ai.FullDuplexService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, _ := strconv.ParseInt(chi.URLParam(r, "tenantID"), 10, 64)
+		tenantID := middleware.TenantIDFromCtx(r.Context())
 		var c ai.FullDuplexConfig
 		if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 			response.Error(w, 400, err.Error())

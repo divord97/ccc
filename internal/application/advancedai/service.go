@@ -2,6 +2,7 @@ package advancedai
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/divord97/ccc/internal/domain/ai"
 	"github.com/divord97/ccc/internal/infrastructure/llm"
@@ -106,6 +107,8 @@ func (s *Service) RunConversationAnalysis(ctx context.Context, tenantID, taskID 
 		resultJSON, err = s.analyticsLLM.ExtractSalesScripts(ctx, transcripts)
 	case ai.AnalysisTypeTopic:
 		resultJSON, err = s.analyticsLLM.ClusterTopics(ctx, transcripts)
+	default:
+		return fmt.Errorf("advancedai: unsupported analysis type: %s", task.Type)
 	}
 	if err != nil {
 		s.logger.Error().Err(err).Msg("advancedai: analysis failed")
