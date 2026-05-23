@@ -182,9 +182,8 @@ func (h *CallControlHandler) Monitor(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// Get tenant from the target call
 	target, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
+	if err != nil || target == nil {
 		response.Error(w, http.StatusNotFound, "call not found")
 		return
 	}
@@ -206,7 +205,7 @@ func (h *CallControlHandler) Whisper(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	target, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
+	if err != nil || target == nil {
 		response.Error(w, http.StatusNotFound, "call not found")
 		return
 	}
@@ -228,7 +227,7 @@ func (h *CallControlHandler) Barge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	target, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
+	if err != nil || target == nil {
 		response.Error(w, http.StatusNotFound, "call not found")
 		return
 	}
@@ -250,7 +249,7 @@ func (h *CallControlHandler) InterceptCall(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	target, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
+	if err != nil || target == nil {
 		response.Error(w, http.StatusNotFound, "call not found")
 		return
 	}
@@ -273,7 +272,7 @@ func (h *CallControlHandler) Coach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	target, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
+	if err != nil || target == nil {
 		response.Error(w, http.StatusNotFound, "call not found")
 		return
 	}

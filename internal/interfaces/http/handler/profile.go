@@ -31,14 +31,24 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	userID, _ := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
 	var in struct {
 		DisplayName string `json:"display_name"`
-		Avatar      string `json:"avatar"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		response.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	updated, err := h.userSvc.Update(r.Context(), userID, in.DisplayName, in.Avatar, "")
+	existing, err := h.userSvc.GetByID(r.Context(), userID)
+	if err != nil {
+		response.Error(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	displayName := in.DisplayName
+	if displayName == "" {
+		displayName = existing.DisplayName
+	}
+
+	updated, err := h.userSvc.Update(r.Context(), userID, displayName, existing.Email, existing.Phone)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, err.Error())
 		return
