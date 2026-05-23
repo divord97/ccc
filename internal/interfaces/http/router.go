@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/divord97/ccc/internal/domain/ai"
 	"github.com/divord97/ccc/internal/domain/platform"
 	"github.com/divord97/ccc/internal/infrastructure/redis"
 	"github.com/divord97/ccc/internal/interfaces/http/handler"
@@ -80,6 +81,14 @@ type RouterDeps struct {
 	AnnotationHandler    *handler.AnnotationHandler
 	LLMGatewayHandler    *handler.LLMGatewayHandler
 	WebRTCQualityHandler *handler.WebRTCQualityHandler
+
+	// Advanced AI
+	CommAgentSvc  *ai.CommAgentService
+	VoiceSvc      *ai.VoiceProfileService
+	AnalysisSvc   *ai.ConversationAnalysisService
+	TrainingSvc   *ai.TrainingService
+	RingSvc       *ai.RingAnalysisService
+	FullDuplexSvc *ai.FullDuplexService
 
 	// Infrastructure
 	RateLimiter  *redis.RateLimiter
@@ -526,6 +535,47 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 		r.Post("/webrtc-quality", deps.WebRTCQualityHandler.Save)
 		r.Get("/calls/{callId}/webrtc-quality", deps.WebRTCQualityHandler.ListByCall)
 		r.Get("/agents/{agentId}/webrtc-quality", deps.WebRTCQualityHandler.ListByAgent)
+
+		// --- Advanced AI Routes ---
+
+		r.Route("/tenants/{tenantID}/comm-agents", func(r chi.Router) {
+			r.Get("/", handler.ListCommAgents(deps.CommAgentSvc))
+			r.Post("/", handler.CreateCommAgent(deps.CommAgentSvc))
+			r.Get("/{id}", handler.GetCommAgent(deps.CommAgentSvc))
+			r.Delete("/{id}", handler.DeleteCommAgent(deps.CommAgentSvc))
+		})
+
+		r.Route("/tenants/{tenantID}/voice-profiles", func(r chi.Router) {
+			r.Get("/", handler.ListVoiceProfiles(deps.VoiceSvc))
+			r.Post("/", handler.CreateVoiceProfile(deps.VoiceSvc))
+			r.Get("/{id}", handler.GetVoiceProfile(deps.VoiceSvc))
+			r.Post("/{id}/train", handler.StartVoiceTraining(deps.VoiceSvc))
+			r.Delete("/{id}", handler.DeleteVoiceProfile(deps.VoiceSvc))
+		})
+
+		r.Route("/tenants/{tenantID}/conversation-analysis", func(r chi.Router) {
+			r.Get("/", handler.ListAnalysisTasks(deps.AnalysisSvc))
+			r.Post("/", handler.CreateAnalysisTask(deps.AnalysisSvc))
+			r.Get("/{id}", handler.GetAnalysisTask(deps.AnalysisSvc))
+		})
+
+		r.Route("/tenants/{tenantID}/training/courses", func(r chi.Router) {
+			r.Get("/", handler.ListCourses(deps.TrainingSvc))
+			r.Post("/", handler.CreateCourse(deps.TrainingSvc))
+			r.Get("/{id}", handler.GetCourse(deps.TrainingSvc))
+			r.Post("/{id}/publish", handler.PublishCourse(deps.TrainingSvc))
+		})
+		r.Post("/tenants/{tenantID}/training/exams", handler.SubmitExam(deps.TrainingSvc))
+		r.Get("/tenants/{tenantID}/training/agents/{agentID}/exams", handler.ListExamsByAgent(deps.TrainingSvc))
+		r.Post("/tenants/{tenantID}/training/simulated-calls", handler.CreateSimulatedCall(deps.TrainingSvc))
+		r.Get("/tenants/{tenantID}/training/agents/{agentID}/simulated-calls", handler.ListSimulatedCalls(deps.TrainingSvc))
+
+		r.Get("/tenants/{tenantID}/ring-analysis/config", handler.GetRingAnalysisConfig(deps.RingSvc))
+		r.Put("/tenants/{tenantID}/ring-analysis/config", handler.UpsertRingAnalysisConfig(deps.RingSvc))
+		r.Get("/tenants/{tenantID}/calls/{callID}/ring-analysis", handler.GetRingAnalysisLogs(deps.RingSvc))
+
+		r.Get("/tenants/{tenantID}/full-duplex/config", handler.GetFullDuplexConfig(deps.FullDuplexSvc))
+		r.Put("/tenants/{tenantID}/full-duplex/config", handler.UpsertFullDuplexConfig(deps.FullDuplexSvc))
 	})
 
 	// --- Public Routes (no JWT auth) ---

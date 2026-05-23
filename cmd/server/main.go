@@ -249,6 +249,26 @@ func main() {
 	llmGatewayHandler := handler.NewLLMGatewayHandler(llmGatewaySvc)
 	webrtcQualityHandler := handler.NewWebRTCQualityHandler(webrtcQualityRepo)
 
+	// Advanced AI Repositories
+	commAgentRepo := infraMySQL.NewCommAgentRepo(db)
+	commAgentSessionRepo := infraMySQL.NewCommAgentSessionRepo(db)
+	voiceProfileRepo := infraMySQL.NewVoiceProfileRepo(db)
+	analysisTaskRepo := infraMySQL.NewConversationAnalysisTaskRepo(db)
+	trainingCourseRepo := infraMySQL.NewTrainingCourseRepo(db)
+	trainingExamRepo := infraMySQL.NewTrainingExamRepo(db)
+	simulatedCallRepo := infraMySQL.NewSimulatedCallRepo(db)
+	ringAnalysisConfigRepo := infraMySQL.NewRingAnalysisConfigRepo(db)
+	ringAnalysisLogRepo := infraMySQL.NewRingAnalysisLogRepo(db)
+	fullDuplexConfigRepo := infraMySQL.NewFullDuplexConfigRepo(db)
+
+	// Advanced AI Domain Services
+	commAgentSvc := ai.NewCommAgentService(commAgentRepo, commAgentSessionRepo)
+	voiceProfileSvc := ai.NewVoiceProfileService(voiceProfileRepo)
+	conversationAnalysisSvc := ai.NewConversationAnalysisService(analysisTaskRepo)
+	trainingSvc := ai.NewTrainingService(trainingCourseRepo, trainingExamRepo, simulatedCallRepo)
+	ringAnalysisSvc := ai.NewRingAnalysisService(ringAnalysisConfigRepo, ringAnalysisLogRepo)
+	fullDuplexSvc := ai.NewFullDuplexService(fullDuplexConfigRepo)
+
 	// --- Router ---
 	router := httpRouter.NewRouter(httpRouter.RouterDeps{
 		TenantHandler:        tenantHandler,
@@ -298,6 +318,12 @@ func main() {
 		AnnotationHandler:      annotationHandler,
 		LLMGatewayHandler:      llmGatewayHandler,
 		WebRTCQualityHandler:   webrtcQualityHandler,
+		CommAgentSvc:           commAgentSvc,
+		VoiceSvc:               voiceProfileSvc,
+		AnalysisSvc:            conversationAnalysisSvc,
+		TrainingSvc:            trainingSvc,
+		RingSvc:                ringAnalysisSvc,
+		FullDuplexSvc:          fullDuplexSvc,
 		RateLimiter:          rateLimiter,
 		AuditLogRepo:         auditLogRepo,
 		JWTSecret:            cfg.JWT.Secret,
