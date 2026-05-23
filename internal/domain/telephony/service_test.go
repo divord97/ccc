@@ -3,7 +3,6 @@ package telephony
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -135,5 +134,103 @@ func TestCLIPolicyService_SelectCLI_MatchArea(t *testing.T) {
 	assert.Equal(t, "+010XXXX", pn.Number, "should match area code")
 }
 
-// Prevent unused import for time in tests
-var _ = time.Now
+func TestTrunkHealthCheck_OPTIONSKeepalive(t *testing.T) {
+	trunkRepo := NewMockPhoneNumberRepo() // just need a SIPTrunkRepository
+	_ = trunkRepo
+	svc := NewTrunkHealthService(&mockSIPTrunkRepo{}, NewMockSIPTrunkGroupRepo())
+
+	// Initially healthy
+	h := svc.GetHealthStatus(100)
+	assert.Equal(t, TrunkStatusActive, h.Status)
+
+	// 1 failure — still active
+	svc.RecordHealthCheck(100, false)
+	h = svc.GetHealthStatus(100)
+	assert.Equal(t, TrunkStatusActive, h.Status)
+	assert.Equal(t, 1, h.FailCount)
+
+	// 2 failures — still active
+	svc.RecordHealthCheck(100, false)
+	h = svc.GetHealthStatus(100)
+	assert.Equal(t, TrunkStatusActive, h.Status)
+
+	// 3 failures — down
+	svc.RecordHealthCheck(100, false)
+	h = svc.GetHealthStatus(100)
+	assert.Equal(t, TrunkStatusDown, h.Status)
+
+	// Success — recovered
+	svc.RecordHealthCheck(100, true)
+	h = svc.GetHealthStatus(100)
+	assert.Equal(t, TrunkStatusActive, h.Status)
+	assert.Equal(t, 0, h.FailCount)
+}
+
+func TestTrunkFailover_AutoSwitch(t *testing.T) {
+	trunkRepo := &mockSIPTrunkRepo{
+		trunks: map[int64]*SIPTrunk{
+			1: {ID: 1, Name: "Primary", Status: "active"},
+			2: {ID: 2, Name: "Backup", Status: "active"},
+		},
+	}
+	groupRepo := NewMockSIPTrunkGroupRepo()
+	ctx := context.Background()
+
+	_ = groupRepo.Create(ctx, &SIPTrunkGroup{ID: 10, TenantID: 1, Name: "HA Group", Strategy: "priority"})
+	_ = groupRepo.AddMember(ctx, &SIPTrunkGroupMember{ID: 1, GroupID: 10, SIPTrunkID: 1, Priority: 1})
+	_ = groupRepo.AddMember(ctx, &SIPTrunkGroupMember{ID: 2, GroupID: 10, SIPTrunkID: 2, Priority: 2})
+
+	svc := NewTrunkHealthService(trunkRepo, groupRepo)
+
+	// Both healthy — should pick primary (trunk 1)
+	trunk, err := svc.SelectHealthyTrunk(ctx, 10)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), trunk.ID)
+
+	// Mark primary as down
+	svc.RecordHealthCheck(1, false)
+	svc.RecordHealthCheck(1, false)
+	svc.RecordHealthCheck(1, false)
+
+	// Should failover to backup (trunk 2)
+	trunk, err = svc.SelectHealthyTrunk(ctx, 10)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), trunk.ID)
+
+	// Mark both as down
+	svc.RecordHealthCheck(2, false)
+	svc.RecordHealthCheck(2, false)
+	svc.RecordHealthCheck(2, false)
+
+	_, err = svc.SelectHealthyTrunk(ctx, 10)
+	assert.ErrorIs(t, err, ErrNoHealthyTrunk)
+}
+
+// mockSIPTrunkRepo implements SIPTrunkRepository for tests.
+type mockSIPTrunkRepo struct {
+	trunks map[int64]*SIPTrunk
+}
+
+func (r *mockSIPTrunkRepo) Create(_ context.Context, t *SIPTrunk) error {
+	if r.trunks == nil {
+		r.trunks = make(map[int64]*SIPTrunk)
+	}
+	r.trunks[t.ID] = t
+	return nil
+}
+
+func (r *mockSIPTrunkRepo) GetByID(_ context.Context, id int64) (*SIPTrunk, error) {
+	if r.trunks == nil {
+		return nil, nil
+	}
+	return r.trunks[id], nil
+}
+
+func (r *mockSIPTrunkRepo) Update(_ context.Context, t *SIPTrunk) error {
+	r.trunks[t.ID] = t
+	return nil
+}
+
+func (r *mockSIPTrunkRepo) List(_ context.Context, _ int64, _, _ int) ([]*SIPTrunk, int64, error) {
+	return nil, 0, nil
+}

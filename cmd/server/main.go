@@ -5,10 +5,13 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/divord97/ccc/internal/application/b2b"
 	"github.com/divord97/ccc/internal/application/csat"
+	"github.com/divord97/ccc/internal/application/dialer"
 	"github.com/divord97/ccc/internal/application/outbound"
 	"github.com/divord97/ccc/internal/config"
 	"github.com/divord97/ccc/internal/domain/call"
+	"github.com/divord97/ccc/internal/domain/campaign"
 	"github.com/divord97/ccc/internal/domain/identity"
 	"github.com/divord97/ccc/internal/domain/integration"
 	"github.com/divord97/ccc/internal/domain/report"
@@ -78,6 +81,11 @@ func main() {
 	quickReplyRepo := infraMySQL.NewQuickReplyRepo(db)
 	smsConfigRepo := infraMySQL.NewSmsConfigRepo(db)
 
+	// --- Phase 6 Repositories ---
+	campaignRepo := infraMySQL.NewCampaignRepo(db)
+	campaignCaseRepo := infraMySQL.NewCampaignCaseRepo(db)
+	trunkGroupRepo := infraMySQL.NewSIPTrunkGroupRepo(db)
+
 	// --- Phase 4 Repositories ---
 	agentReportRepo := infraMySQL.NewAgentReportRepo(db)
 	groupAgentReportRepo := infraMySQL.NewGroupAgentReportRepo(db)
@@ -106,9 +114,16 @@ func main() {
 	dashboardSvc := report.NewDashboardService(dashboardRepo)
 	reportSvc := report.NewReportService(agentReportRepo, groupAgentReportRepo, skillGroupReportRepo, b2bReportRepo, internalCallReportRepo, agentStatusLogRepo)
 
+	// --- Phase 6 Domain Services ---
+	campaignSvc := campaign.NewCampaignService(campaignRepo, campaignCaseRepo)
+	trunkHealthSvc := telephony.NewTrunkHealthService(sipTrunkRepo, trunkGroupRepo)
+	_ = trunkHealthSvc
+
 	// --- Application Services ---
 	outboundSvc := outbound.NewService(callSvc, routingSvc, cliSvc, dncSvc, nil)
 	csatSvc := csat.NewService(csatConfigRepo, csatResultRepo, logger)
+	dialerSvc := dialer.NewService(campaignSvc, nil, logger)
+	b2bSvc := b2b.NewService(callRepo, callEventRepo, nil, logger)
 	_ = callbackRepo // used via callSvc
 
 	// --- Infrastructure ---
@@ -141,6 +156,9 @@ func main() {
 	reportHandler := handler.NewReportHandler(reportSvc)
 	csatHandler := handler.NewCSATHandler(csatSvc, csatConfigRepo, csatResultRepo)
 	profileHandler := handler.NewProfileHandler(userSvc)
+	campaignHandler := handler.NewCampaignHandler(campaignSvc, dialerSvc)
+	b2bHandler := handler.NewB2BHandler(b2bSvc)
+	trunkGroupHandler := handler.NewTrunkGroupHandler(trunkGroupRepo)
 
 	// --- Router ---
 	router := httpRouter.NewRouter(httpRouter.RouterDeps{
@@ -170,6 +188,9 @@ func main() {
 		ReportHandler:        reportHandler,
 		CSATHandler:          csatHandler,
 		ProfileHandler:       profileHandler,
+		CampaignHandler:      campaignHandler,
+		B2BHandler:           b2bHandler,
+		TrunkGroupHandler:    trunkGroupHandler,
 		RateLimiter:          rateLimiter,
 		AuditLogRepo:         auditLogRepo,
 		JWTSecret:            cfg.JWT.Secret,

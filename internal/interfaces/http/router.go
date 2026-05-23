@@ -50,6 +50,11 @@ type RouterDeps struct {
 	// Phase 5
 	ProfileHandler *handler.ProfileHandler
 
+	// Phase 6
+	CampaignHandler   *handler.CampaignHandler
+	B2BHandler        *handler.B2BHandler
+	TrunkGroupHandler *handler.TrunkGroupHandler
+
 	// Infrastructure
 	RateLimiter  *redis.RateLimiter
 	AuditLogRepo platform.AuditLogRepository
@@ -294,6 +299,31 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Put("/profile", deps.ProfileHandler.UpdateProfile)
 			r.Put("/password", deps.ProfileHandler.ChangePassword)
 			r.Post("/reset-state", deps.ProfileHandler.ResetState)
+		})
+
+		// --- Phase 6 Routes ---
+
+		r.Route("/campaigns", func(r chi.Router) {
+			r.Post("/", deps.CampaignHandler.Create)
+			r.Get("/", deps.CampaignHandler.List)
+			r.Get("/{id}", deps.CampaignHandler.GetByID)
+			r.Put("/{id}", deps.CampaignHandler.Update)
+			r.Post("/{id}/start", deps.CampaignHandler.Start)
+			r.Post("/{id}/pause", deps.CampaignHandler.Pause)
+			r.Post("/{id}/abort", deps.CampaignHandler.Abort)
+			r.Post("/{id}/cases/import", deps.CampaignHandler.ImportCases)
+			r.Get("/{id}/cases", deps.CampaignHandler.ListCases)
+			r.Get("/{id}/stats", deps.CampaignHandler.Stats)
+		})
+
+		r.Post("/calls/back2back", deps.B2BHandler.Back2BackCall)
+		r.Post("/flash-sms", deps.B2BHandler.FlashSMS)
+
+		r.Route("/sip-trunk-groups", func(r chi.Router) {
+			r.Post("/", deps.TrunkGroupHandler.Create)
+			r.Get("/", deps.TrunkGroupHandler.List)
+			r.Post("/{id}/members", deps.TrunkGroupHandler.AddMember)
+			r.Get("/{id}/members", deps.TrunkGroupHandler.ListMembers)
 		})
 	})
 

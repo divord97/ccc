@@ -150,6 +150,75 @@ func (s *CLIPolicyService) SelectCLI(ctx context.Context, tenantID int64, policy
 	}
 }
 
+// TrunkHealthService manages trunk health and failover.
+type TrunkHealthService struct {
+	trunks SIPTrunkRepository
+	groups SIPTrunkGroupRepository
+	health map[int64]*TrunkHealthStatus
+}
+
+func NewTrunkHealthService(trunks SIPTrunkRepository, groups SIPTrunkGroupRepository) *TrunkHealthService {
+	return &TrunkHealthService{
+		trunks: trunks,
+		groups: groups,
+		health: make(map[int64]*TrunkHealthStatus),
+	}
+}
+
+// RecordHealthCheck updates trunk health after an OPTIONS keepalive result.
+func (s *TrunkHealthService) RecordHealthCheck(trunkID int64, success bool) {
+	h, ok := s.health[trunkID]
+	if !ok {
+		h = &TrunkHealthStatus{TrunkID: trunkID, Status: TrunkStatusActive}
+		s.health[trunkID] = h
+	}
+	h.LastCheckAt = time.Now()
+
+	if success {
+		h.Status = TrunkStatusActive
+		h.FailCount = 0
+	} else {
+		h.FailCount++
+		if h.FailCount >= 3 {
+			h.Status = TrunkStatusDown
+		}
+	}
+}
+
+// GetHealthStatus returns the current health status of a trunk.
+func (s *TrunkHealthService) GetHealthStatus(trunkID int64) *TrunkHealthStatus {
+	h, ok := s.health[trunkID]
+	if !ok {
+		return &TrunkHealthStatus{TrunkID: trunkID, Status: TrunkStatusActive}
+	}
+	return h
+}
+
+// SelectHealthyTrunk picks the best available trunk from a group, skipping down trunks.
+func (s *TrunkHealthService) SelectHealthyTrunk(ctx context.Context, groupID int64) (*SIPTrunk, error) {
+	members, err := s.groups.ListMembers(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if len(members) == 0 {
+		return nil, ErrTrunkGroupNotFound
+	}
+
+	// Sort by priority (lower = higher priority) — members are already in insert order
+	for _, m := range members {
+		h := s.GetHealthStatus(m.SIPTrunkID)
+		if h.Status == TrunkStatusDown {
+			continue
+		}
+		trunk, err := s.trunks.GetByID(ctx, m.SIPTrunkID)
+		if err != nil || trunk == nil {
+			continue
+		}
+		return trunk, nil
+	}
+	return nil, ErrNoHealthyTrunk
+}
+
 func parseNumberPool(ids string) []int64 {
 	if ids == "" {
 		return nil
