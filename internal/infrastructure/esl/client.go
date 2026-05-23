@@ -235,6 +235,21 @@ func (c *Client) OriginateToPhone(ctx context.Context, uuid, phoneNumber, caller
 	return err
 }
 
+// OriginateB2B initiates a back-to-back call (双呼) bridging two external parties.
+func (c *Client) OriginateB2B(ctx context.Context, callerNum, calleeNum, callerID, gateway string) error {
+	dest := fmt.Sprintf("sofia/gateway/%s/%s", gateway, calleeNum)
+	cmd := fmt.Sprintf("originate {origination_caller_id_number=%s}sofia/gateway/%s/%s &bridge(%s)", callerID, gateway, callerNum, dest)
+	_, err := c.SendCommand(ctx, cmd)
+	return err
+}
+
+// FlashSMS sends a flash/push SMS via FreeSWITCH chat API.
+func (c *Client) FlashSMS(ctx context.Context, from, to, message string) error {
+	cmd := fmt.Sprintf("chat sms|%s|%s|%s", from, to, message)
+	_, err := c.SendCommand(ctx, cmd)
+	return err
+}
+
 func (c *Client) Close() {
 	close(c.pool)
 }

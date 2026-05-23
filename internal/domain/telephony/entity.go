@@ -84,6 +84,37 @@ type PhoneNumber struct {
 	UpdatedAt       time.Time `db:"updated_at" json:"updated_at"`
 }
 
+type TrunkStatus string
+
+const (
+	TrunkStatusActive  TrunkStatus = "active"
+	TrunkStatusDown    TrunkStatus = "down"
+	TrunkStatusDraining TrunkStatus = "draining"
+)
+
+type SIPTrunkGroup struct {
+	ID        int64     `db:"id" json:"id"`
+	TenantID  int64     `db:"tenant_id" json:"tenant_id"`
+	Name      string    `db:"name" json:"name"`
+	Strategy  string    `db:"strategy" json:"strategy"` // priority, round_robin
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type SIPTrunkGroupMember struct {
+	ID           int64 `db:"id" json:"id"`
+	GroupID      int64 `db:"group_id" json:"group_id"`
+	SIPTrunkID   int64 `db:"sip_trunk_id" json:"sip_trunk_id"`
+	Priority     int   `db:"priority" json:"priority"`
+}
+
+type TrunkHealthStatus struct {
+	TrunkID     int64       `json:"trunk_id"`
+	Status      TrunkStatus `json:"status"`
+	LastCheckAt time.Time   `json:"last_check_at"`
+	FailCount   int         `json:"fail_count"`
+}
+
 type CallNumberTag struct {
 	ID        int64     `db:"id" json:"id"`
 	TenantID  int64     `db:"tenant_id" json:"tenant_id"`

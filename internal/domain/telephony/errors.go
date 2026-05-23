@@ -10,4 +10,7 @@ var (
 	ErrNoMatchingRoute     = errors.New("no matching routing rule")
 	ErrNoCLIPolicy         = errors.New("no CLI policy found")
 	ErrNoCLINumber         = errors.New("no CLI number available")
+	ErrTrunkGroupNotFound  = errors.New("trunk group not found")
+	ErrNoHealthyTrunk      = errors.New("no healthy trunk available")
+	ErrTrunkDown           = errors.New("trunk is down")
 )

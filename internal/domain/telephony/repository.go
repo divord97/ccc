@@ -41,6 +41,15 @@ type PhoneNumberRepository interface {
 	List(ctx context.Context, tenantID int64, offset, limit int) ([]*PhoneNumber, int64, error)
 }
 
+type SIPTrunkGroupRepository interface {
+	Create(ctx context.Context, g *SIPTrunkGroup) error
+	GetByID(ctx context.Context, id int64) (*SIPTrunkGroup, error)
+	Update(ctx context.Context, g *SIPTrunkGroup) error
+	List(ctx context.Context, tenantID int64, offset, limit int) ([]*SIPTrunkGroup, int64, error)
+	AddMember(ctx context.Context, m *SIPTrunkGroupMember) error
+	ListMembers(ctx context.Context, groupID int64) ([]*SIPTrunkGroupMember, error)
+}
+
 type CallNumberTagRepository interface {
 	Create(ctx context.Context, t *CallNumberTag) error
 	ListByNumber(ctx context.Context, tenantID int64, number string) ([]*CallNumberTag, error)

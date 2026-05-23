@@ -133,6 +133,72 @@ func (r *MockCLIPolicyRepo) List(_ context.Context, tenantID int64, offset, limi
 	return filtered[offset:end], total, nil
 }
 
+type MockSIPTrunkGroupRepo struct {
+	mu      sync.RWMutex
+	groups  map[int64]*SIPTrunkGroup
+	members map[int64][]*SIPTrunkGroupMember
+}
+
+func NewMockSIPTrunkGroupRepo() *MockSIPTrunkGroupRepo {
+	return &MockSIPTrunkGroupRepo{
+		groups:  make(map[int64]*SIPTrunkGroup),
+		members: make(map[int64][]*SIPTrunkGroupMember),
+	}
+}
+
+func (r *MockSIPTrunkGroupRepo) Create(_ context.Context, g *SIPTrunkGroup) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.groups[g.ID] = g
+	return nil
+}
+
+func (r *MockSIPTrunkGroupRepo) GetByID(_ context.Context, id int64) (*SIPTrunkGroup, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.groups[id], nil
+}
+
+func (r *MockSIPTrunkGroupRepo) Update(_ context.Context, g *SIPTrunkGroup) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.groups[g.ID] = g
+	return nil
+}
+
+func (r *MockSIPTrunkGroupRepo) List(_ context.Context, tenantID int64, offset, limit int) ([]*SIPTrunkGroup, int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var filtered []*SIPTrunkGroup
+	for _, g := range r.groups {
+		if g.TenantID == tenantID {
+			filtered = append(filtered, g)
+		}
+	}
+	total := int64(len(filtered))
+	if offset >= len(filtered) {
+		return nil, total, nil
+	}
+	end := offset + limit
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+	return filtered[offset:end], total, nil
+}
+
+func (r *MockSIPTrunkGroupRepo) AddMember(_ context.Context, m *SIPTrunkGroupMember) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.members[m.GroupID] = append(r.members[m.GroupID], m)
+	return nil
+}
+
+func (r *MockSIPTrunkGroupRepo) ListMembers(_ context.Context, groupID int64) ([]*SIPTrunkGroupMember, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.members[groupID], nil
+}
+
 type MockPhoneNumberRepo struct {
 	mu      sync.RWMutex
 	numbers map[int64]*PhoneNumber
