@@ -19,12 +19,12 @@ func NewKnowledgeService(categories KnowledgeCategoryRepository, articles Knowle
 }
 
 type CreateArticleInput struct {
-	TenantID   int64
-	CategoryID *int64
-	Title      string
-	Content    string
-	Tags       string
-	Status     string
+	TenantID   int64  `json:"tenant_id"`
+	CategoryID *int64 `json:"category_id"`
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	Tags       string `json:"tags"`
+	Status     string `json:"status"`
 }
 
 func (s *KnowledgeService) CreateArticle(ctx context.Context, in CreateArticleInput) (*KnowledgeArticle, error) {
@@ -99,10 +99,10 @@ func NewAgentScriptService(scripts AgentScriptRepository) *AgentScriptService {
 }
 
 type CreateScriptInput struct {
-	TenantID int64
-	Name     string
-	Content  string
-	IsActive bool
+	TenantID int64  `json:"tenant_id"`
+	Name     string `json:"name"`
+	Content  string `json:"content"`
+	IsActive bool   `json:"is_active"`
 }
 
 func (s *AgentScriptService) Create(ctx context.Context, in CreateScriptInput) (*AgentScript, error) {

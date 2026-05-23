@@ -30,19 +30,19 @@ func NewCustomerService(
 }
 
 type PhoneInput struct {
-	PhoneType string
-	Number    string
-	IsPrimary bool
+	PhoneType string `json:"phone_type"`
+	Number    string `json:"number"`
+	IsPrimary bool   `json:"is_primary"`
 }
 
 type CreateCustomerInput struct {
-	TenantID   int64
-	Name       string
-	Email      string
-	Company    string
-	Level      string
-	CustomData string
-	Phones     []PhoneInput
+	TenantID   int64        `json:"tenant_id"`
+	Name       string       `json:"name"`
+	Email      string       `json:"email"`
+	Company    string       `json:"company"`
+	Level      string       `json:"level"`
+	CustomData string       `json:"custom_data"`
+	Phones     []PhoneInput `json:"phones"`
 }
 
 type RecordInteractionInput struct {

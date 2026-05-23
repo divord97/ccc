@@ -30,11 +30,11 @@ func NewTicketTemplateService(templates TicketTemplateRepository, categories Tic
 }
 
 type CreateTemplateInput struct {
-	TenantID   int64
-	Name       string
-	CategoryID *int64
-	Fields     string
-	FlowGraph  string
+	TenantID   int64  `json:"tenant_id"`
+	Name       string `json:"name"`
+	CategoryID *int64 `json:"category_id"`
+	Fields     string `json:"fields"`
+	FlowGraph  string `json:"flow_graph"`
 }
 
 func (s *TicketTemplateService) Create(ctx context.Context, in CreateTemplateInput) (*TicketTemplate, error) {
@@ -139,15 +139,15 @@ func NewTicketService(tickets TicketRepository, templates TicketTemplateReposito
 }
 
 type CreateTicketInput struct {
-	TenantID    int64
-	TemplateID  *int64
-	CategoryID  *int64
-	Title       string
-	Description string
-	Priority    string
-	CustomerID  *int64
-	CallID      *int64
-	CustomData  string
+	TenantID    int64  `json:"tenant_id"`
+	TemplateID  *int64 `json:"template_id"`
+	CategoryID  *int64 `json:"category_id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Priority    string `json:"priority"`
+	CustomerID  *int64 `json:"customer_id"`
+	CallID      *int64 `json:"call_id"`
+	CustomData  string `json:"custom_data"`
 }
 
 func (s *TicketService) Create(ctx context.Context, in CreateTicketInput) (*Ticket, error) {

@@ -189,7 +189,7 @@ func (s *TrunkHealthService) RecordHealthCheck(trunkID int64, success bool) {
 	}
 }
 
-// GetHealthStatus returns the current health status of a trunk.
+// GetHealthStatus returns a snapshot of the current health status of a trunk.
 func (s *TrunkHealthService) GetHealthStatus(trunkID int64) *TrunkHealthStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -197,7 +197,8 @@ func (s *TrunkHealthService) GetHealthStatus(trunkID int64) *TrunkHealthStatus {
 	if !ok {
 		return &TrunkHealthStatus{TrunkID: trunkID, Status: TrunkStatusActive}
 	}
-	return h
+	cp := *h
+	return &cp
 }
 
 // SelectHealthyTrunk picks the best available trunk from a group, skipping down trunks.
