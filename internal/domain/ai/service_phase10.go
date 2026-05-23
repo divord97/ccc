@@ -3,6 +3,8 @@ package ai
 import (
 	"context"
 	"time"
+
+	"github.com/divord97/ccc/pkg/snowflake"
 )
 
 // AnnotationService manages annotation tasks and results.
@@ -20,6 +22,7 @@ func (s *AnnotationService) CreateTask(ctx context.Context, in CreateAnnotationT
 		return nil, ErrInvalidAnnotationType
 	}
 	task := &AnnotationTask{
+		ID:           snowflake.NextID(),
 		TenantID:     in.TenantID,
 		Name:         in.Name,
 		Type:         in.Type,
@@ -111,6 +114,7 @@ func (s *AnnotationService) SubmitAnnotation(ctx context.Context, in SubmitAnnot
 	}
 
 	result := &AnnotationResult{
+		ID:          snowflake.NextID(),
 		TaskID:      in.TaskID,
 		TenantID:    in.TenantID,
 		ItemIndex:   in.ItemIndex,
@@ -156,6 +160,7 @@ func (s *LLMGatewayService) CreateConfig(ctx context.Context, in CreateLLMModelC
 		return nil, ErrInvalidProviderType
 	}
 	config := &LLMModelConfig{
+		ID:           snowflake.NextID(),
 		TenantID:     in.TenantID,
 		Name:         in.Name,
 		ProviderType: in.ProviderType,

@@ -9,6 +9,7 @@ import (
 	"github.com/divord97/ccc/internal/domain/call"
 	"github.com/divord97/ccc/internal/interfaces/http/middleware"
 	"github.com/divord97/ccc/pkg/response"
+	"github.com/divord97/ccc/pkg/snowflake"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -38,6 +39,7 @@ func (h *WebRTCQualityHandler) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log := &call.WebRTCQualityLog{
+		ID:             snowflake.NextID(),
 		CallID:         in.CallID,
 		TenantID:       tenantID,
 		AgentID:        in.AgentID,
