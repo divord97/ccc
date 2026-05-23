@@ -55,6 +55,13 @@ type RouterDeps struct {
 	B2BHandler        *handler.B2BHandler
 	TrunkGroupHandler *handler.TrunkGroupHandler
 
+	// Phase 8
+	IMChannelHandler   *handler.IMChannelHandler
+	IMSessionHandler   *handler.IMSessionHandler
+	WidgetHandler      *handler.WidgetHandler
+	EmailInboundHandler *handler.EmailInboundHandler
+	IMAssistHandler    *handler.IMAssistHandler
+
 	// Infrastructure
 	RateLimiter  *redis.RateLimiter
 	AuditLogRepo platform.AuditLogRepository
@@ -324,6 +331,36 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Get("/", deps.TrunkGroupHandler.List)
 			r.Post("/{id}/members", deps.TrunkGroupHandler.AddMember)
 			r.Get("/{id}/members", deps.TrunkGroupHandler.ListMembers)
+		})
+
+		// --- Phase 8 Routes ---
+
+		r.Route("/im-channels", func(r chi.Router) {
+			r.Post("/", deps.IMChannelHandler.Create)
+			r.Get("/", deps.IMChannelHandler.List)
+			r.Put("/{id}", deps.IMChannelHandler.Update)
+		})
+
+		r.Route("/im-sessions", func(r chi.Router) {
+			r.Get("/", deps.IMSessionHandler.List)
+			r.Get("/{id}", deps.IMSessionHandler.Get)
+			r.Post("/{id}/transfer", deps.IMSessionHandler.Transfer)
+			r.Post("/{id}/close", deps.IMSessionHandler.Close)
+			r.Get("/{id}/messages", deps.IMSessionHandler.ListMessages)
+			r.Post("/{id}/messages", deps.IMSessionHandler.SendMessage)
+		})
+
+		r.Route("/widget", func(r chi.Router) {
+			r.Post("/sessions", deps.WidgetHandler.CreateSession)
+			r.Post("/sessions/{id}/messages", deps.WidgetHandler.SendMessage)
+		})
+
+		r.Post("/email/inbound", deps.EmailInboundHandler.Inbound)
+
+		r.Route("/im/ai-assist", func(r chi.Router) {
+			r.Post("/correct", deps.IMAssistHandler.Correct)
+			r.Post("/expand", deps.IMAssistHandler.Expand)
+			r.Post("/optimize", deps.IMAssistHandler.Optimize)
 		})
 	})
 
