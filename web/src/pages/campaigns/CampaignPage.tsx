@@ -78,7 +78,7 @@ export default function CampaignPage() {
         <Upload.Dragger accept=".csv,.xlsx" customRequest={async ({ file, onSuccess }) => {
           const formData = new FormData();
           formData.append('file', file as File);
-          await campaignApi.importCases(importModal!, { file: formData });
+          await campaignApi.importCases(importModal!, formData as unknown as Record<string, unknown>);
           message.success('导入成功');
           onSuccess?.({});
           setImportModal(null);

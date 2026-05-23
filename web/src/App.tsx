@@ -31,6 +31,7 @@ import SkillGroupReportPage from './pages/reports/SkillGroupReportPage';
 import B2BReportPage from './pages/reports/B2BReportPage';
 import InternalCallReportPage from './pages/reports/InternalCallReportPage';
 import StatusLogPage from './pages/reports/StatusLogPage';
+import CsatReportPage from './pages/reports/CsatReportPage';
 import TenantSettingsPage from './pages/settings/TenantSettingsPage';
 import BreakReasonsPage from './pages/settings/BreakReasonsPage';
 import DispositionCodesPage from './pages/settings/DispositionCodesPage';
@@ -89,7 +90,7 @@ export default function App() {
             <Route path="reports/b2b" element={<B2BReportPage />} />
             <Route path="reports/internal" element={<InternalCallReportPage />} />
             <Route path="reports/status-log" element={<StatusLogPage />} />
-            <Route path="reports/csat" element={<CsatConfigPage />} />
+            <Route path="reports/csat" element={<CsatReportPage />} />
             {/* AI */}
             <Route path="ai/digital-employees" element={<DigitalEmployeePage />} />
             <Route path="ai/qa" element={<QaPage />} />
