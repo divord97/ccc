@@ -84,6 +84,20 @@ func (h *SocialChannelHandler) WeChatVerify(w http.ResponseWriter, r *http.Reque
 func (h *SocialChannelHandler) WeChatReceive(w http.ResponseWriter, r *http.Request) {
 	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
 
+	sig := r.URL.Query().Get("signature")
+	timestamp := r.URL.Query().Get("timestamp")
+	nonce := r.URL.Query().Get("nonce")
+
+	cfg, err := h.svc.GetConfig(r.Context(), channelID)
+	if err != nil {
+		http.Error(w, "config not found", 404)
+		return
+	}
+	if !h.svc.VerifyWeChatSignature(cfg.Token, timestamp, nonce, sig) {
+		http.Error(w, "invalid signature", 403)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "read body failed", 400)
@@ -119,12 +133,30 @@ func (h *SocialChannelHandler) WeiboVerify(w http.ResponseWriter, r *http.Reques
 func (h *SocialChannelHandler) WeiboReceive(w http.ResponseWriter, r *http.Request) {
 	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
 
+	cfg, err := h.svc.GetConfig(r.Context(), channelID)
+	if err != nil {
+		http.Error(w, "config not found", 404)
+		return
+	}
+
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "read body failed", 400)
+		return
+	}
+
+	weiboSig := r.URL.Query().Get("signature")
+	if !h.svc.VerifyWeiboSignature(cfg.AppSecret, string(rawBody), weiboSig) {
+		http.Error(w, "invalid signature", 403)
+		return
+	}
+
 	var payload struct {
 		SenderID string `json:"sender_id"`
 		Text     string `json:"text"`
 		MsgID    string `json:"msg_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if err := json.Unmarshal(rawBody, &payload); err != nil {
 		http.Error(w, "parse failed", 400)
 		return
 	}

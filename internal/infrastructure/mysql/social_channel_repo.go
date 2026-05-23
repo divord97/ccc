@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/divord97/ccc/internal/domain/im"
 	"github.com/jmoiron/sqlx"
@@ -24,6 +25,9 @@ func (r *SocialChannelConfigRepo) Create(ctx context.Context, c *im.SocialChanne
 func (r *SocialChannelConfigRepo) GetByChannelID(ctx context.Context, channelID int64) (*im.SocialChannelConfig, error) {
 	var c im.SocialChannelConfig
 	err := r.db.GetContext(ctx, &c, "SELECT * FROM social_channel_configs WHERE channel_id=?", channelID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +37,9 @@ func (r *SocialChannelConfigRepo) GetByChannelID(ctx context.Context, channelID 
 func (r *SocialChannelConfigRepo) GetByPlatformAndAppID(ctx context.Context, platform im.SocialPlatform, appID string) (*im.SocialChannelConfig, error) {
 	var c im.SocialChannelConfig
 	err := r.db.GetContext(ctx, &c, "SELECT * FROM social_channel_configs WHERE platform=? AND app_id=?", platform, appID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
