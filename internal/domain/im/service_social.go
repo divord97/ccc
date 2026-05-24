@@ -2,7 +2,8 @@ package im
 
 import (
 	"context"
-	"crypto/sha1"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
 	"fmt"
@@ -130,10 +131,10 @@ func (s *SocialChannelService) VerifyWeChatSignature(token, timestamp, nonce, si
 	return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
 }
 
-// VerifyWeiboSignature validates a Weibo webhook signature (simplified HMAC check).
+// VerifyWeiboSignature validates a Weibo webhook signature using HMAC-SHA256.
 func (s *SocialChannelService) VerifyWeiboSignature(appSecret, body, signature string) bool {
-	h := sha1.New()
-	h.Write([]byte(appSecret + body))
+	h := hmac.New(sha256.New, []byte(appSecret))
+	h.Write([]byte(body))
 	expected := fmt.Sprintf("%x", h.Sum(nil))
 	return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
 }
