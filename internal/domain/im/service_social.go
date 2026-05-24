@@ -3,6 +3,7 @@ package im
 import (
 	"context"
 	"crypto/sha1"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"sort"
@@ -126,7 +127,7 @@ func (s *SocialChannelService) VerifyWeChatSignature(token, timestamp, nonce, si
 	h := sha1.New()
 	h.Write([]byte(strings.Join(strs, "")))
 	expected := fmt.Sprintf("%x", h.Sum(nil))
-	return expected == signature
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
 }
 
 // VerifyWeiboSignature validates a Weibo webhook signature (simplified HMAC check).
@@ -134,7 +135,7 @@ func (s *SocialChannelService) VerifyWeiboSignature(appSecret, body, signature s
 	h := sha1.New()
 	h.Write([]byte(appSecret + body))
 	expected := fmt.Sprintf("%x", h.Sum(nil))
-	return expected == signature
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
 }
 
 // ProcessInboundMessage converts a social platform message into an IM session + message.
