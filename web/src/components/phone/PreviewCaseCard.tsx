@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, Descriptions, Button, Space, Tag, Spin, message } from 'antd';
 import { PhoneOutlined, ForwardOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import api from '../../api/client';
@@ -21,6 +21,7 @@ export default function PreviewCaseCard() {
   const [caseData, setCaseData] = useState<PreviewCase | null>(null);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const wasCountingRef = useRef(false);
 
   const loadCase = async () => {
     setLoading(true);
@@ -38,14 +39,19 @@ export default function PreviewCaseCard() {
 
   useEffect(() => {
     if (countdown <= 0) return;
+    wasCountingRef.current = true;
     const t = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) { handleSkip(); return 0; }
-        return c - 1;
-      });
+      setCountdown((c) => (c <= 1 ? 0 : c - 1));
     }, 1000);
     return () => clearInterval(t);
   }, [countdown > 0]);
+
+  useEffect(() => {
+    if (countdown === 0 && wasCountingRef.current) {
+      wasCountingRef.current = false;
+      handleSkip();
+    }
+  }, [countdown]);
 
   const handleDial = async () => {
     if (!caseData) return;

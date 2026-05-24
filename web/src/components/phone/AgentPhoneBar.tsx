@@ -49,9 +49,9 @@ export default function AgentPhoneBar() {
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
-  const changeStatus = useCallback(async (newStatus: string) => {
+  const changeStatus = useCallback(async (newStatus: string, reason?: string) => {
     try {
-      await agentPresenceApi.changeStatus({ status: newStatus });
+      await agentPresenceApi.changeStatus({ status: newStatus, ...(reason && { reason }) });
       setStatus(newStatus as AgentStatus);
     } catch {
       message.error('状态切换失败');
@@ -106,7 +106,7 @@ export default function AgentPhoneBar() {
   const breakMenu: MenuProps['items'] = breakReasons.map((r) => ({
     key: r.value,
     label: r.label,
-    onClick: () => changeStatus('break'),
+    onClick: () => changeStatus('break', r.value),
   }));
 
   const cfg = statusConfig[status];
