@@ -75,7 +75,10 @@ func (h *SocialChannelHandler) WeChatVerify(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	h.svc.MarkVerified(r.Context(), channelID)
+	if err := h.svc.MarkVerified(r.Context(), channelID); err != nil {
+		http.Error(w, "mark verified failed", 500)
+		return
+	}
 	w.WriteHeader(200)
 	w.Write([]byte(echoStr))
 }
@@ -124,7 +127,28 @@ func (h *SocialChannelHandler) WeChatReceive(w http.ResponseWriter, r *http.Requ
 
 // WeiboVerify handles Weibo webhook verification.
 func (h *SocialChannelHandler) WeiboVerify(w http.ResponseWriter, r *http.Request) {
+	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
 	echoStr := r.URL.Query().Get("echostr")
+
+	cfg, err := h.svc.GetConfig(r.Context(), channelID)
+	if err != nil {
+		http.Error(w, "config not found", 404)
+		return
+	}
+
+	sig := r.URL.Query().Get("signature")
+	timestamp := r.URL.Query().Get("timestamp")
+	nonce := r.URL.Query().Get("nonce")
+	rawStr := cfg.Token + timestamp + nonce
+	if !h.svc.VerifyWeiboSignature(cfg.AppSecret, rawStr, sig) {
+		http.Error(w, "invalid signature", 403)
+		return
+	}
+
+	if err := h.svc.MarkVerified(r.Context(), channelID); err != nil {
+		http.Error(w, "mark verified failed", 500)
+		return
+	}
 	w.WriteHeader(200)
 	w.Write([]byte(echoStr))
 }
