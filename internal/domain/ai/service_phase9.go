@@ -550,12 +550,29 @@ func evaluateSpeedRule(rule *QARule, transcript string) QARuleResult {
 	// Try to parse [speed:Xwpm] marker.
 	re := regexp.MustCompile(`\[speed:([\d.]+)wpm\]`)
 	var speed float64
+	var hasSpeed bool
 	if m := re.FindStringSubmatch(transcript); len(m) > 1 {
 		fmt.Sscanf(m[1], "%f", &speed)
+		hasSpeed = true
 	} else {
-		// Estimate from character count (Chinese: ~300 chars/min is normal).
-		charCount := utf8.RuneCountInString(transcript)
-		speed = float64(charCount) * 60 / 300 // normalize to approximate wpm
+		// Try to compute from character count and [duration:Xs] marker.
+		durRe := regexp.MustCompile(`\[duration:([\d.]+)s\]`)
+		if dm := durRe.FindStringSubmatch(transcript); len(dm) > 1 {
+			var durSec float64
+			fmt.Sscanf(dm[1], "%f", &durSec)
+			if durSec > 0 {
+				charCount := utf8.RuneCountInString(transcript)
+				speed = float64(charCount) / (durSec / 60)
+				hasSpeed = true
+			}
+		}
+	}
+
+	if !hasSpeed {
+		rr.Passed = true
+		rr.Score = 100
+		rr.Detail = "no speed or duration metadata available, skipped"
+		return rr
 	}
 
 	if cfg.MaxWordsPerMin > 0 && speed > cfg.MaxWordsPerMin {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
@@ -46,7 +47,7 @@ func (mc *MsgCrypt) VerifySignature(signature, timestamp, nonce string) bool {
 	h := sha1.New()
 	h.Write([]byte(strings.Join(strs, "")))
 	expected := fmt.Sprintf("%x", h.Sum(nil))
-	return expected == signature
+	return hmac.Equal([]byte(expected), []byte(signature))
 }
 
 // VerifyEncryptedSignature verifies signature including encrypted message.
@@ -56,7 +57,7 @@ func (mc *MsgCrypt) VerifyEncryptedSignature(signature, timestamp, nonce, encryp
 	h := sha1.New()
 	h.Write([]byte(strings.Join(strs, "")))
 	expected := fmt.Sprintf("%x", h.Sum(nil))
-	return expected == signature
+	return hmac.Equal([]byte(expected), []byte(signature))
 }
 
 // DecryptMessage decrypts an AES-encrypted WeChat message.
@@ -145,8 +146,13 @@ func pkcs7Unpad(data []byte) []byte {
 		return data
 	}
 	padding := int(data[len(data)-1])
-	if padding > len(data) || padding > aes.BlockSize {
+	if padding < 1 || padding > len(data) || padding > aes.BlockSize {
 		return data
+	}
+	for i := 0; i < padding; i++ {
+		if data[len(data)-1-i] != byte(padding) {
+			return data
+		}
 	}
 	return data[:len(data)-padding]
 }
