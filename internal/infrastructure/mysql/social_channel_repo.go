@@ -22,6 +22,18 @@ func (r *SocialChannelConfigRepo) Create(ctx context.Context, c *im.SocialChanne
 	return err
 }
 
+func (r *SocialChannelConfigRepo) GetByID(ctx context.Context, id int64) (*im.SocialChannelConfig, error) {
+	var c im.SocialChannelConfig
+	err := r.db.GetContext(ctx, &c, "SELECT * FROM social_channel_configs WHERE id=?", id)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
 func (r *SocialChannelConfigRepo) GetByChannelID(ctx context.Context, channelID int64) (*im.SocialChannelConfig, error) {
 	var c im.SocialChannelConfig
 	err := r.db.GetContext(ctx, &c, "SELECT * FROM social_channel_configs WHERE channel_id=?", channelID)
@@ -32,6 +44,13 @@ func (r *SocialChannelConfigRepo) GetByChannelID(ctx context.Context, channelID 
 		return nil, err
 	}
 	return &c, nil
+}
+
+func (r *SocialChannelConfigRepo) List(ctx context.Context, tenantID int64) ([]*im.SocialChannelConfig, error) {
+	var items []*im.SocialChannelConfig
+	err := r.db.SelectContext(ctx, &items,
+		`SELECT * FROM social_channel_configs WHERE tenant_id=? ORDER BY created_at DESC`, tenantID)
+	return items, err
 }
 
 func (r *SocialChannelConfigRepo) GetByPlatformAndAppID(ctx context.Context, platform im.SocialPlatform, appID string) (*im.SocialChannelConfig, error) {

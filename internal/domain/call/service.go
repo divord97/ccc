@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/divord97/ccc/internal/infrastructure/esl"
 	"github.com/divord97/ccc/pkg/snowflake"
 )
 
@@ -13,6 +14,7 @@ type CallService struct {
 	events    CallEventRepository
 	tracking  IVRTrackingRepository
 	callbacks CallbackRequestRepository
+	eslClient *esl.Client
 }
 
 func NewCallService(cr CallRepository, er CallEventRepository, tr IVRTrackingRepository, cbr ...CallbackRequestRepository) *CallService {
@@ -21,6 +23,10 @@ func NewCallService(cr CallRepository, er CallEventRepository, tr IVRTrackingRep
 		s.callbacks = cbr[0]
 	}
 	return s
+}
+
+func (s *CallService) SetESLClient(client *esl.Client) {
+	s.eslClient = client
 }
 
 type CreateCallInput struct {
@@ -119,6 +125,12 @@ func (s *CallService) EndCall(ctx context.Context, id int64, reason HangupReason
 
 	if err := s.calls.Update(ctx, c); err != nil {
 		return nil, err
+	}
+
+	if s.eslClient != nil {
+		go func(uuid string) {
+			_ = s.eslClient.HangupCall(context.Background(), uuid)
+		}(fmt.Sprintf("%d", c.ID))
 	}
 
 	_ = s.events.Create(ctx, &CallEvent{
@@ -259,6 +271,11 @@ func (s *CallService) HoldCall(ctx context.Context, id int64) (*Call, error) {
 	if err := s.calls.Update(ctx, c); err != nil {
 		return nil, err
 	}
+	if s.eslClient != nil {
+		go func(uuid string) {
+			_ = s.eslClient.HoldCall(context.Background(), uuid)
+		}(fmt.Sprintf("%d", c.ID))
+	}
 	_ = s.events.Create(ctx, &CallEvent{
 		ID: snowflake.NextID(), CallID: c.ID, TenantID: c.TenantID,
 		Event: "call_held", CreatedAt: time.Now(),
@@ -278,6 +295,11 @@ func (s *CallService) RetrieveCall(ctx context.Context, id int64) (*Call, error)
 	c.Status = CallStatusActive
 	if err := s.calls.Update(ctx, c); err != nil {
 		return nil, err
+	}
+	if s.eslClient != nil {
+		go func(uuid string) {
+			_ = s.eslClient.RetrieveCall(context.Background(), uuid)
+		}(fmt.Sprintf("%d", c.ID))
 	}
 	_ = s.events.Create(ctx, &CallEvent{
 		ID: snowflake.NextID(), CallID: c.ID, TenantID: c.TenantID,
@@ -315,6 +337,11 @@ func (s *CallService) BlindTransfer(ctx context.Context, id int64, target Transf
 	if err := s.calls.Update(ctx, c); err != nil {
 		return nil, err
 	}
+	if s.eslClient != nil && target.ExternalNum != "" {
+		go func(uuid, dest string) {
+			_ = s.eslClient.TransferCall(context.Background(), uuid, dest)
+		}(fmt.Sprintf("%d", c.ID), target.ExternalNum)
+	}
 	_ = s.events.Create(ctx, &CallEvent{
 		ID: snowflake.NextID(), CallID: c.ID, TenantID: c.TenantID,
 		Event: "blind_transfer", Detail: detail, CreatedAt: time.Now(),
@@ -333,6 +360,11 @@ func (s *CallService) SendDTMF(ctx context.Context, id int64, digits string) err
 	}
 	if c.Status == CallStatusCompleted || c.Status == CallStatusFailed {
 		return ErrCallAlreadyEnded
+	}
+	if s.eslClient != nil {
+		go func(uuid, tones string) {
+			_ = s.eslClient.SendDTMF(context.Background(), uuid, tones)
+		}(fmt.Sprintf("%d", c.ID), digits)
 	}
 	_ = s.events.Create(ctx, &CallEvent{
 		ID: snowflake.NextID(), CallID: c.ID, TenantID: c.TenantID,
@@ -482,6 +514,11 @@ func (s *CallService) StartConference(ctx context.Context, id int64) (*Call, err
 	if err := s.calls.Update(ctx, c); err != nil {
 		return nil, err
 	}
+	if s.eslClient != nil {
+		go func(uuid, confName string) {
+			_ = s.eslClient.Conference(context.Background(), uuid, confName)
+		}(fmt.Sprintf("%d", c.ID), fmt.Sprintf("call_%d", c.ID))
+	}
 	_ = s.events.Create(ctx, &CallEvent{
 		ID: snowflake.NextID(), CallID: c.ID, TenantID: c.TenantID,
 		Event: "conference_started", CreatedAt: time.Now(),
@@ -528,6 +565,22 @@ func (s *CallService) MonitorCall(ctx context.Context, tenantID, targetCallID, s
 	if err := s.calls.Create(ctx, monitor); err != nil {
 		return nil, err
 	}
+	if s.eslClient != nil {
+		monitorUUID := fmt.Sprintf("%d", monitor.ID)
+		targetUUID := fmt.Sprintf("%d", target.ID)
+		go func() {
+			switch mode {
+			case "listen":
+				_ = s.eslClient.Eavesdrop(context.Background(), monitorUUID, targetUUID)
+			case "whisper":
+				_ = s.eslClient.EavesdropWhisper(context.Background(), monitorUUID, targetUUID)
+			case "barge":
+				_ = s.eslClient.EavesdropBarge(context.Background(), monitorUUID, targetUUID)
+			case "intercept":
+				_ = s.eslClient.Intercept(context.Background(), monitorUUID, targetUUID)
+			}
+		}()
+	}
 
 	_ = s.events.Create(ctx, &CallEvent{
 		ID: snowflake.NextID(), CallID: monitor.ID, TenantID: tenantID,
@@ -563,6 +616,11 @@ func (s *CallService) CoachCall(ctx context.Context, tenantID, targetCallID, coa
 	}
 	if err := s.calls.Create(ctx, coach); err != nil {
 		return nil, err
+	}
+	if s.eslClient != nil {
+		go func(uuid, targetUUID string) {
+			_ = s.eslClient.Coach(context.Background(), uuid, targetUUID)
+		}(fmt.Sprintf("%d", coach.ID), fmt.Sprintf("%d", target.ID))
 	}
 
 	_ = s.events.Create(ctx, &CallEvent{

@@ -22,6 +22,12 @@ func (m *MockSocialChannelConfigRepo) Create(_ context.Context, c *SocialChannel
 	return nil
 }
 
+func (m *MockSocialChannelConfigRepo) GetByID(_ context.Context, id int64) (*SocialChannelConfig, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.items[id], nil
+}
+
 func (m *MockSocialChannelConfigRepo) GetByChannelID(_ context.Context, channelID int64) (*SocialChannelConfig, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -31,6 +37,18 @@ func (m *MockSocialChannelConfigRepo) GetByChannelID(_ context.Context, channelI
 		}
 	}
 	return nil, nil
+}
+
+func (m *MockSocialChannelConfigRepo) List(_ context.Context, tenantID int64) ([]*SocialChannelConfig, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var out []*SocialChannelConfig
+	for _, c := range m.items {
+		if c.TenantID == tenantID {
+			out = append(out, c)
+		}
+	}
+	return out, nil
 }
 
 func (m *MockSocialChannelConfigRepo) GetByPlatformAndAppID(_ context.Context, platform SocialPlatform, appID string) (*SocialChannelConfig, error) {

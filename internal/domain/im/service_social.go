@@ -14,14 +14,14 @@ import (
 )
 
 var (
-	ErrSocialConfigNotFound    = errors.New("social channel config not found")
-	ErrSocialAppIDEmpty        = errors.New("app_id is required")
-	ErrSocialAppSecretEmpty    = errors.New("app_secret is required")
-	ErrSocialTokenEmpty        = errors.New("webhook token is required")
-	ErrSocialInvalidPlatform   = errors.New("invalid social platform")
-	ErrSocialSignatureInvalid  = errors.New("webhook signature verification failed")
-	ErrSocialOpenIDEmpty       = errors.New("open_id is required")
-	ErrSocialMessageEmpty      = errors.New("message content is required")
+	ErrSocialConfigNotFound   = errors.New("social channel config not found")
+	ErrSocialAppIDEmpty       = errors.New("app_id is required")
+	ErrSocialAppSecretEmpty   = errors.New("app_secret is required")
+	ErrSocialTokenEmpty       = errors.New("webhook token is required")
+	ErrSocialInvalidPlatform  = errors.New("invalid social platform")
+	ErrSocialSignatureInvalid = errors.New("webhook signature verification failed")
+	ErrSocialOpenIDEmpty      = errors.New("open_id is required")
+	ErrSocialMessageEmpty     = errors.New("message content is required")
 )
 
 var validPlatforms = map[SocialPlatform]bool{
@@ -60,6 +60,15 @@ type CreateSocialConfigInput struct {
 	AppSecret      string         `json:"app_secret"`
 	Token          string         `json:"token"`
 	EncodingAESKey string         `json:"encoding_aes_key"`
+}
+
+// UpdateSocialConfigInput updates credentials for a social channel config.
+type UpdateSocialConfigInput struct {
+	AppID          *string `json:"app_id"`
+	AppSecret      *string `json:"app_secret"`
+	Token          *string `json:"token"`
+	EncodingAESKey *string `json:"encoding_aes_key"`
+	WebhookURL     *string `json:"webhook_url"`
 }
 
 func (s *SocialChannelService) CreateConfig(ctx context.Context, in CreateSocialConfigInput) (*SocialChannelConfig, error) {
@@ -104,6 +113,10 @@ func (s *SocialChannelService) CreateConfig(ctx context.Context, in CreateSocial
 	return cfg, nil
 }
 
+func (s *SocialChannelService) ListConfigs(ctx context.Context, tenantID int64) ([]*SocialChannelConfig, error) {
+	return s.configs.List(ctx, tenantID)
+}
+
 func (s *SocialChannelService) GetConfig(ctx context.Context, channelID int64) (*SocialChannelConfig, error) {
 	cfg, err := s.configs.GetByChannelID(ctx, channelID)
 	if err != nil {
@@ -111,6 +124,45 @@ func (s *SocialChannelService) GetConfig(ctx context.Context, channelID int64) (
 	}
 	if cfg == nil {
 		return nil, ErrSocialConfigNotFound
+	}
+	return cfg, nil
+}
+
+func (s *SocialChannelService) UpdateConfig(ctx context.Context, id int64, in UpdateSocialConfigInput) (*SocialChannelConfig, error) {
+	cfg, err := s.configs.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, ErrSocialConfigNotFound
+	}
+	if in.AppID != nil {
+		if *in.AppID == "" {
+			return nil, ErrSocialAppIDEmpty
+		}
+		cfg.AppID = *in.AppID
+	}
+	if in.AppSecret != nil {
+		if *in.AppSecret == "" {
+			return nil, ErrSocialAppSecretEmpty
+		}
+		cfg.AppSecret = *in.AppSecret
+	}
+	if in.Token != nil {
+		if *in.Token == "" {
+			return nil, ErrSocialTokenEmpty
+		}
+		cfg.Token = *in.Token
+	}
+	if in.EncodingAESKey != nil {
+		cfg.EncodingAESKey = *in.EncodingAESKey
+	}
+	if in.WebhookURL != nil {
+		cfg.WebhookURL = *in.WebhookURL
+	}
+	cfg.UpdatedAt = time.Now()
+	if err := s.configs.Update(ctx, cfg); err != nil {
+		return nil, err
 	}
 	return cfg, nil
 }

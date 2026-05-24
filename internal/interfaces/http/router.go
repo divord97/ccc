@@ -30,10 +30,15 @@ type RouterDeps struct {
 	AutoTagRuleHandler   *handler.AutoTagRuleHandler
 
 	// Phase 2
-	RoutingRuleHandler *handler.RoutingRuleHandler
-	CLIPolicyHandler   *handler.CLIPolicyHandler
-	DNCHandler         *handler.DNCHandler
-	CallHandler        *handler.CallHandler
+	RoutingRuleHandler     *handler.RoutingRuleHandler
+	CLIPolicyHandler       *handler.CLIPolicyHandler
+	DNCHandler             *handler.DNCHandler
+	CallHandler            *handler.CallHandler
+	BreakReasonHandler     *handler.BreakReasonHandler
+	DispositionCodeHandler *handler.DispositionCodeHandler
+	CallTagHandler         *handler.CallTagHandler
+	AudioFileHandler       *handler.AudioFileHandler
+	BusinessHoursHandler   *handler.BusinessHoursHandler
 
 	// Phase 3
 	CallControlHandler     *handler.CallControlHandler
@@ -92,6 +97,9 @@ type RouterDeps struct {
 
 	// Social Channels
 	SocialChannelHandler *handler.SocialChannelHandler
+
+	// Audit Logs
+	AuditLogHandler *handler.AuditLogHandler
 
 	// Infrastructure
 	RateLimiter  *redis.RateLimiter
@@ -223,6 +231,44 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Put("/{id}", deps.CLIPolicyHandler.Update)
 		})
 
+		r.Route("/break-reasons", func(r chi.Router) {
+			r.Post("/", deps.BreakReasonHandler.Create)
+			r.Get("/", deps.BreakReasonHandler.List)
+			r.Get("/{id}", deps.BreakReasonHandler.Get)
+			r.Put("/{id}", deps.BreakReasonHandler.Update)
+			r.Delete("/{id}", deps.BreakReasonHandler.Delete)
+		})
+
+		r.Route("/disposition-codes", func(r chi.Router) {
+			r.Post("/", deps.DispositionCodeHandler.Create)
+			r.Get("/", deps.DispositionCodeHandler.List)
+			r.Get("/{id}", deps.DispositionCodeHandler.Get)
+			r.Put("/{id}", deps.DispositionCodeHandler.Update)
+			r.Delete("/{id}", deps.DispositionCodeHandler.Delete)
+		})
+
+		r.Route("/call-tags", func(r chi.Router) {
+			r.Post("/", deps.CallTagHandler.Create)
+			r.Get("/", deps.CallTagHandler.List)
+			r.Get("/{id}", deps.CallTagHandler.Get)
+			r.Delete("/{id}", deps.CallTagHandler.Delete)
+		})
+
+		r.Route("/audio-files", func(r chi.Router) {
+			r.Post("/", deps.AudioFileHandler.Create)
+			r.Get("/", deps.AudioFileHandler.List)
+			r.Get("/{id}", deps.AudioFileHandler.Get)
+			r.Delete("/{id}", deps.AudioFileHandler.Delete)
+		})
+
+		r.Route("/business-hours", func(r chi.Router) {
+			r.Post("/", deps.BusinessHoursHandler.Create)
+			r.Get("/", deps.BusinessHoursHandler.List)
+			r.Get("/{id}", deps.BusinessHoursHandler.Get)
+			r.Put("/{id}", deps.BusinessHoursHandler.Update)
+			r.Delete("/{id}", deps.BusinessHoursHandler.Delete)
+		})
+
 		r.Route("/dnc-list", func(r chi.Router) {
 			r.Post("/", deps.DNCHandler.Create)
 			r.Get("/", deps.DNCHandler.List)
@@ -309,6 +355,8 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 			r.Get("/internal-call", deps.ReportHandler.InternalCallReport)
 			r.Get("/agent-status-log", deps.ReportHandler.AgentStatusLog)
 		})
+
+		r.Get("/audit-logs", deps.AuditLogHandler.List)
 
 		r.Route("/csat", func(r chi.Router) {
 			r.Post("/config", deps.CSATHandler.CreateConfig)
@@ -584,6 +632,8 @@ func NewRouter(deps RouterDeps) *chi.Mux {
 		// --- Social Channel Config ---
 		r.Route("/social-configs", func(r chi.Router) {
 			r.Post("/", deps.SocialChannelHandler.CreateConfig)
+			r.Get("/", deps.SocialChannelHandler.ListConfigs)
+			r.Put("/{id}", deps.SocialChannelHandler.UpdateConfig)
 			r.Get("/channels/{channelID}", deps.SocialChannelHandler.GetConfig)
 			r.Delete("/{id}", deps.SocialChannelHandler.DeleteConfig)
 		})

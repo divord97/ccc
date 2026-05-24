@@ -12,6 +12,7 @@ type Config struct {
 	JWT       JWTConfig
 	Snowflake SnowflakeConfig
 	Aliyun    AliyunConfig
+	ESL       ESLConfig
 }
 
 type ServerConfig struct {
@@ -45,6 +46,13 @@ type AliyunConfig struct {
 	DashScopeModel  string
 }
 
+type ESLConfig struct {
+	Host     string
+	Port     int
+	Password string
+	PoolSize int
+}
+
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -71,6 +79,12 @@ func Load() *Config {
 			NLSAppKey:       envOr("ALIYUN_NLS_APP_KEY", ""),
 			DashScopeAPIKey: envOr("DASHSCOPE_API_KEY", ""),
 			DashScopeModel:  envOr("DASHSCOPE_MODEL", "qwen-plus"),
+		},
+		ESL: ESLConfig{
+			Host:     envOr("ESL_HOST", "freeswitch"),
+			Port:     envOrInt("ESL_PORT", 8021),
+			Password: envOr("ESL_PASSWORD", "ClueCon"),
+			PoolSize: envOrInt("ESL_POOL_SIZE", 5),
 		},
 	}
 }

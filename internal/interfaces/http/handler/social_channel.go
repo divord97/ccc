@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/divord97/ccc/internal/domain/im"
+	"github.com/divord97/ccc/internal/interfaces/http/middleware"
 	"github.com/divord97/ccc/pkg/response"
 	"github.com/go-chi/chi/v5"
 )
@@ -34,12 +35,39 @@ func (h *SocialChannelHandler) CreateConfig(w http.ResponseWriter, r *http.Reque
 	response.JSON(w, 201, cfg)
 }
 
+// ListConfigs returns all social configs for the tenant.
+func (h *SocialChannelHandler) ListConfigs(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromCtx(r.Context())
+	items, err := h.svc.ListConfigs(r.Context(), tenantID)
+	if err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.JSON(w, 200, items)
+}
+
 // GetConfig returns social config for a channel.
 func (h *SocialChannelHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
 	cfg, err := h.svc.GetConfig(r.Context(), channelID)
 	if err != nil {
 		response.Error(w, 404, err.Error())
+		return
+	}
+	response.JSON(w, 200, cfg)
+}
+
+// UpdateConfig updates a social channel config.
+func (h *SocialChannelHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var in im.UpdateSocialConfigInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		response.Error(w, 400, err.Error())
+		return
+	}
+	cfg, err := h.svc.UpdateConfig(r.Context(), id, in)
+	if err != nil {
+		response.Error(w, 422, err.Error())
 		return
 	}
 	response.JSON(w, 200, cfg)

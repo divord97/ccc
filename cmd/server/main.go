@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/divord97/ccc/internal/application/advancedai"
 	"github.com/divord97/ccc/internal/application/aianalysis"
 	"github.com/divord97/ccc/internal/application/b2b"
 	"github.com/divord97/ccc/internal/application/csat"
@@ -24,6 +25,7 @@ import (
 	"github.com/divord97/ccc/internal/domain/routing"
 	"github.com/divord97/ccc/internal/domain/telephony"
 	"github.com/divord97/ccc/internal/domain/ticket"
+	"github.com/divord97/ccc/internal/infrastructure/esl"
 	"github.com/divord97/ccc/internal/infrastructure/llm"
 	infraMySQL "github.com/divord97/ccc/internal/infrastructure/mysql"
 	infraRedis "github.com/divord97/ccc/internal/infrastructure/redis"
@@ -79,6 +81,12 @@ func main() {
 	cliPolicyRepo := infraMySQL.NewCLIPolicyRepo(db)
 	dncRepo := infraMySQL.NewDNCRepo(db)
 	callTagRepo := infraMySQL.NewCallTagAssignmentRepo(db)
+	breakReasonRepo := infraMySQL.NewBreakReasonRepo(db)
+	dispositionCodeRepo := infraMySQL.NewDispositionCodeRepo(db)
+	callTagConfigRepo := infraMySQL.NewCallTagRepo(db)
+	audioFileRepo := infraMySQL.NewAudioFileRepo(db)
+	businessHoursRepo := infraMySQL.NewBusinessHoursRepo(db)
+	businessHoursScheduleRepo := infraMySQL.NewBusinessHoursScheduleRepo(db)
 
 	// --- Phase 3 Repositories ---
 	callbackRepo := infraMySQL.NewCallbackRequestRepo(db)
@@ -119,6 +127,14 @@ func main() {
 	csatResultRepo := infraMySQL.NewCSATResultRepo(db)
 	dashboardRepo := infraRedis.NewDashboardRepo(redisClient)
 
+	eslClient := esl.NewClient(esl.Config{
+		Host:     cfg.ESL.Host,
+		Port:     cfg.ESL.Port,
+		Password: cfg.ESL.Password,
+		PoolSize: cfg.ESL.PoolSize,
+		Logger:   logger,
+	})
+
 	// --- Domain Services ---
 	tenantSvc := identity.NewTenantService(tenantRepo, tenantSettingsRepo)
 	userSvc := identity.NewUserService(userRepo, agentRepo)
@@ -126,6 +142,7 @@ func main() {
 	skillGroupSvc := identity.NewSkillGroupService(skillGroupRepo, skillGroupMemberRepo)
 	ivrFlowSvc := routing.NewIVRFlowService(ivrFlowRepo, ivrFlowVersionRepo)
 	callSvc := call.NewCallService(callRepo, callEventRepo, ivrTrackingRepo, callbackRepo)
+	callSvc.SetESLClient(eslClient)
 	agentPresenceSvc := identity.NewAgentPresenceService(agentPresenceRepo, agentPresenceLogRepo)
 	routingSvc := telephony.NewRoutingService(routingRuleRepo)
 	cliSvc := telephony.NewCLIPolicyService(cliPolicyRepo, phoneNumberRepo)
@@ -161,10 +178,10 @@ func main() {
 	socialChannelSvc := im.NewSocialChannelService(socialConfigRepo, imChannelRepo, imSessionRepo, imMessageRepo)
 
 	// --- Application Services ---
-	outboundSvc := outbound.NewService(callSvc, routingSvc, cliSvc, dncSvc, nil)
+	outboundSvc := outbound.NewService(callSvc, routingSvc, cliSvc, dncSvc, eslClient)
 	csatSvc := csat.NewService(csatConfigRepo, csatResultRepo, logger)
-	dialerSvc := dialer.NewService(campaignSvc, nil, logger)
-	b2bSvc := b2b.NewService(callRepo, callEventRepo, nil, logger)
+	dialerSvc := dialer.NewService(campaignSvc, eslClient, logger)
+	b2bSvc := b2b.NewService(callRepo, callEventRepo, eslClient, logger)
 	_ = callbackRepo // used via callSvc
 	emailSvc := email.NewService(imSvc, logger)
 	// LLM Provider: use DashScope when API key configured, otherwise fallback to stub.
@@ -218,6 +235,12 @@ func main() {
 	dncHandler := handler.NewDNCHandler(dncSvc, dncRepo)
 	callHandler := handler.NewCallHandler(callSvc, outboundSvc, callTagSvc)
 	callControlHandler := handler.NewCallControlHandler(callSvc)
+	breakReasonHandler := handler.NewBreakReasonHandler(breakReasonRepo)
+	dispositionCodeHandler := handler.NewDispositionCodeHandler(dispositionCodeRepo)
+	callTagConfigHandler := handler.NewCallTagHandler(callTagConfigRepo)
+	audioFileHandler := handler.NewAudioFileHandler(audioFileRepo)
+	businessHoursHandler := handler.NewBusinessHoursHandler(businessHoursRepo, businessHoursScheduleRepo)
+	auditLogHandler := handler.NewAuditLogHandler(auditLogRepo)
 	agentPresenceHandler := handler.NewAgentPresenceHandler(agentPresenceSvc)
 	webhookConfigHandler := handler.NewWebhookConfigHandler(webhookConfigRepo)
 	screenPopConfigHandler := handler.NewScreenPopConfigHandler(screenPopConfigRepo)
@@ -280,8 +303,8 @@ func main() {
 
 	// Advanced AI Providers: use DashScope when API key configured, otherwise stubs.
 	var (
-		commAgentProv    llm.CommAgentProvider
-		voiceCloneProv   llm.VoiceCloningProvider
+		commAgentProv     llm.CommAgentProvider
+		voiceCloneProv    llm.VoiceCloningProvider
 		convAnalyticsProv llm.ConversationAnalyticsProvider
 		ringAnalysisProv  llm.RingAnalysisProvider
 		fullDuplexProv    llm.FullDuplexProvider
@@ -304,12 +327,6 @@ func main() {
 		trainingProv = llm.NewStubTrainingProvider()
 		logger.Warn().Msg("Advanced AI: DASHSCOPE_API_KEY not set, using stub providers")
 	}
-	_ = commAgentProv
-	_ = voiceCloneProv
-	_ = convAnalyticsProv
-	_ = ringAnalysisProv
-	_ = fullDuplexProv
-	_ = trainingProv
 
 	// Advanced AI Domain Services
 	commAgentSvc := ai.NewCommAgentService(commAgentRepo, commAgentSessionRepo)
@@ -319,47 +336,69 @@ func main() {
 	ringAnalysisSvc := ai.NewRingAnalysisService(ringAnalysisConfigRepo, ringAnalysisLogRepo)
 	fullDuplexSvc := ai.NewFullDuplexService(fullDuplexConfigRepo)
 
+	advancedAISvc := advancedai.NewService(advancedai.Deps{
+		CommAgentSvc:  commAgentSvc,
+		VoiceSvc:      voiceProfileSvc,
+		AnalysisSvc:   conversationAnalysisSvc,
+		TrainingSvc:   trainingSvc,
+		RingSvc:       ringAnalysisSvc,
+		FullDuplexSvc: fullDuplexSvc,
+		CommAgentLLM:  commAgentProv,
+		VoiceCloneLLM: voiceCloneProv,
+		AnalyticsLLM:  convAnalyticsProv,
+		RingLLM:       ringAnalysisProv,
+		FullDuplexLLM: fullDuplexProv,
+		TrainingLLM:   trainingProv,
+		Logger:        logger,
+	})
+	logger.Info().Bool("advanced_ai_ready", advancedAISvc != nil).Msg("advanced AI service initialized")
+
 	// --- Router ---
 	router := httpRouter.NewRouter(httpRouter.RouterDeps{
-		TenantHandler:        tenantHandler,
-		UserHandler:          userHandler,
-		AgentHandler:         agentHandler,
-		SkillGroupHandler:    skillGroupHandler,
-		IVRFlowHandler:       ivrFlowHandler,
-		CarrierHandler:       carrierHandler,
-		SIPTrunkHandler:      sipTrunkHandler,
-		PhoneNumberHandler:   phoneNumberHandler,
-		RecordingHandler:     recordingHandler,
-		VoicemailHandler:     voicemailHandler,
-		CallNumberTagHandler: callNumberTagHandler,
-		AutoTagRuleHandler:   autoTagRuleHandler,
-		RoutingRuleHandler:   routingRuleHandler,
-		CLIPolicyHandler:     cliPolicyHandler,
-		DNCHandler:           dncHandler,
-		CallHandler:          callHandler,
-		CallControlHandler:    callControlHandler,
-		AgentPresenceHandler:  agentPresenceHandler,
-		WebhookConfigHandler:  webhookConfigHandler,
+		TenantHandler:          tenantHandler,
+		UserHandler:            userHandler,
+		AgentHandler:           agentHandler,
+		SkillGroupHandler:      skillGroupHandler,
+		IVRFlowHandler:         ivrFlowHandler,
+		CarrierHandler:         carrierHandler,
+		SIPTrunkHandler:        sipTrunkHandler,
+		PhoneNumberHandler:     phoneNumberHandler,
+		RecordingHandler:       recordingHandler,
+		VoicemailHandler:       voicemailHandler,
+		CallNumberTagHandler:   callNumberTagHandler,
+		AutoTagRuleHandler:     autoTagRuleHandler,
+		RoutingRuleHandler:     routingRuleHandler,
+		CLIPolicyHandler:       cliPolicyHandler,
+		DNCHandler:             dncHandler,
+		CallHandler:            callHandler,
+		BreakReasonHandler:     breakReasonHandler,
+		DispositionCodeHandler: dispositionCodeHandler,
+		CallTagHandler:         callTagConfigHandler,
+		AudioFileHandler:       audioFileHandler,
+		BusinessHoursHandler:   businessHoursHandler,
+		CallControlHandler:     callControlHandler,
+		AgentPresenceHandler:   agentPresenceHandler,
+		WebhookConfigHandler:   webhookConfigHandler,
 		ScreenPopConfigHandler: screenPopConfigHandler,
-		QuickReplyHandler:     quickReplyHandler,
-		SmsConfigHandler:      smsConfigHandler,
-		DashboardHandler:     dashboardHandler,
-		ReportHandler:        reportHandler,
-		CSATHandler:          csatHandler,
-		ProfileHandler:       profileHandler,
-		CampaignHandler:      campaignHandler,
-		B2BHandler:           b2bHandler,
-		TrunkGroupHandler:    trunkGroupHandler,
-		CustomerHandler:      customerHandler,
-		TicketHandler:        ticketHandler,
-		KnowledgeHandler:     knowledgeHandler,
-		AgentScriptHandler:   agentScriptHandler,
-		SessionInfoHandler:   sessionInfoHandler,
-		IMChannelHandler:     imChannelHandler,
-		IMSessionHandler:     imSessionHandler,
-		WidgetHandler:        widgetHandler,
-		EmailInboundHandler:  emailInboundHandler,
-		IMAssistHandler:      imAssistHandler,
+		QuickReplyHandler:      quickReplyHandler,
+		SmsConfigHandler:       smsConfigHandler,
+		DashboardHandler:       dashboardHandler,
+		ReportHandler:          reportHandler,
+		CSATHandler:            csatHandler,
+		ProfileHandler:         profileHandler,
+		CampaignHandler:        campaignHandler,
+		B2BHandler:             b2bHandler,
+		TrunkGroupHandler:      trunkGroupHandler,
+		CustomerHandler:        customerHandler,
+		TicketHandler:          ticketHandler,
+		KnowledgeHandler:       knowledgeHandler,
+		AgentScriptHandler:     agentScriptHandler,
+		SessionInfoHandler:     sessionInfoHandler,
+		IMChannelHandler:       imChannelHandler,
+		IMSessionHandler:       imSessionHandler,
+		WidgetHandler:          widgetHandler,
+		EmailInboundHandler:    emailInboundHandler,
+		IMAssistHandler:        imAssistHandler,
 		DigitalEmployeeHandler: digitalEmployeeHandler,
 		QAHandler:              qaHandler,
 		AIAnalysisHandler:      aiAnalysisHandler,
@@ -374,11 +413,12 @@ func main() {
 		TrainingSvc:            trainingSvc,
 		RingSvc:                ringAnalysisSvc,
 		FullDuplexSvc:          fullDuplexSvc,
-		SocialChannelHandler:  socialChannelHandler,
-		RateLimiter:          rateLimiter,
-		AuditLogRepo:         auditLogRepo,
-		JWTSecret:            cfg.JWT.Secret,
-		Logger:               logger,
+		SocialChannelHandler:   socialChannelHandler,
+		AuditLogHandler:        auditLogHandler,
+		RateLimiter:            rateLimiter,
+		AuditLogRepo:           auditLogRepo,
+		JWTSecret:              cfg.JWT.Secret,
+		Logger:                 logger,
 	})
 
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
